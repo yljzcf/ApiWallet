@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
 const vm = require('vm');
 
 function createClassList(initial = '') {
@@ -92,8 +93,8 @@ function createStorageMock(initialState = {}) {
 }
 
 function loadTestExports() {
-  const sharedPath = path.join(__dirname, 'site-config-shared.js');
-  const targetPath = path.join(__dirname, 'add-site.js');
+  const sharedPath = path.join(projectRoot, 'src/shared/site-config-shared.js');
+  const targetPath = path.join(projectRoot, 'src/pages/add-site.js');
   const sharedCode = fs.readFileSync(sharedPath, 'utf8');
   const code = fs.readFileSync(targetPath, 'utf8');
   const sandbox = {

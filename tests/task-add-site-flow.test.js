@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
 const vm = require('vm');
 
 function createSandbox() {
@@ -233,8 +234,8 @@ function createDocumentStub() {
 }
 
 function loadTestExports() {
-  const sharedPath = path.join(__dirname, 'site-config-shared.js');
-  const targetPath = path.join(__dirname, 'add-site.js');
+  const sharedPath = path.join(projectRoot, 'src/shared/site-config-shared.js');
+  const targetPath = path.join(projectRoot, 'src/pages/add-site.js');
   assert(fs.existsSync(targetPath), '文件不存在: add-site.js');
 
   const sharedCode = fs.readFileSync(sharedPath, 'utf8');

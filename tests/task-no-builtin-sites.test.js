@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
 
 const productionFiles = [
-  'popup.js',
-  'add-site.js',
-  'site-config-shared.js'
+  'src/pages/popup.js',
+  'src/pages/add-site.js',
+  'src/shared/site-config-shared.js'
 ];
 
 const forbiddenPatterns = [
@@ -24,7 +25,7 @@ const forbiddenPatterns = [
 ];
 
 for (const file of productionFiles) {
-  const code = fs.readFileSync(path.join(__dirname, file), 'utf8');
+  const code = fs.readFileSync(path.join(projectRoot, file), 'utf8');
   for (const pattern of forbiddenPatterns) {
     assert(!code.includes(pattern), `${file} 不应包含旧站点或内置/隐藏站点语义: ${pattern}`);
   }

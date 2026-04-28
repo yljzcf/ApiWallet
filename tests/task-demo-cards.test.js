@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
 const vm = require('vm');
 
 function createElementStub() {
@@ -39,7 +40,7 @@ function createElementStub() {
 }
 
 (async () => {
-  const sharedCode = fs.readFileSync(path.join(__dirname, 'site-config-shared.js'), 'utf8');
+  const sharedCode = fs.readFileSync(path.join(projectRoot, 'src/shared/site-config-shared.js'), 'utf8');
   const sharedSandbox = {};
   vm.createContext(sharedSandbox);
   vm.runInContext(sharedCode, sharedSandbox);
@@ -73,7 +74,7 @@ function createElementStub() {
   const runtimeTasks = shared.DEMO_SITE_CONFIGS.map((t) => shared.buildManagedTaskConfig(t));
   assert(runtimeTasks.every((t) => t.isDemo === true), 'buildManagedTaskConfig 应保留 isDemo 标记');
 
-  const popupCode = fs.readFileSync(path.join(__dirname, 'popup.js'), 'utf8');
+  const popupCode = fs.readFileSync(path.join(projectRoot, 'src/pages/popup.js'), 'utf8');
   const elementCache = new Map();
   const getEl = (id) => {
     if (!elementCache.has(id)) {

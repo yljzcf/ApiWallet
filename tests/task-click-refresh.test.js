@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
 const vm = require('vm');
 
 function createClassList(initial = '') {
@@ -170,8 +171,8 @@ function bindCardClosests(card, mainButton) {
 }
 
 function loadPopupSandbox() {
-  const sharedCode = fs.readFileSync(path.join(__dirname, 'site-config-shared.js'), 'utf8');
-  const code = fs.readFileSync(path.join(__dirname, 'popup.js'), 'utf8');
+  const sharedCode = fs.readFileSync(path.join(projectRoot, 'src/shared/site-config-shared.js'), 'utf8');
+  const code = fs.readFileSync(path.join(projectRoot, 'src/pages/popup.js'), 'utf8');
   const elementCache = new Map();
   const getEl = (id) => {
     if (!elementCache.has(id)) {

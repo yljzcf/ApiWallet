@@ -1,9 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
 const vm = require('vm');
 
-const sharedCode = fs.readFileSync(path.join(__dirname, 'site-config-shared.js'), 'utf8');
+const sharedCode = fs.readFileSync(path.join(projectRoot, 'src/shared/site-config-shared.js'), 'utf8');
 const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(sharedCode, sandbox);

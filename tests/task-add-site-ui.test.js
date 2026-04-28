@@ -1,8 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
 
-const targetPath = path.join(__dirname, 'add-site.html');
+const targetPath = path.join(projectRoot, 'src/pages/add-site.html');
 
 assert(fs.existsSync(targetPath), '文件不存在: add-site.html');
 
@@ -45,7 +46,7 @@ assert(!/错误提示/.test(siteFormHtml), '单站点配置页初始不应显示
 
 assert(!/id="createModePanel"|id="editModePanel"/.test(siteFormHtml), '单站点配置页不应再保留新增/编辑两套表单面板');
 
-const addSiteJs = fs.readFileSync(path.join(__dirname, 'add-site.js'), 'utf8');
+const addSiteJs = fs.readFileSync(path.join(projectRoot, 'src/pages/add-site.js'), 'utf8');
 assert(!/button\.innerHTML\s*=\s*`[\s\S]*\$\{site\.name\}/.test(addSiteJs), '站点列表不应通过 innerHTML 拼接站点名称');
 assert(!/button\.innerHTML\s*=\s*`[\s\S]*\$\{site\.fieldPath/.test(addSiteJs), '站点列表不应通过 innerHTML 拼接监控字段');
 
