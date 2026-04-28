@@ -28,6 +28,7 @@ assert(/id="groupPopover"/.test(homeHtml), '首页应提供编组弹窗容器');
 assert(/id="groupPopoverNameInput"/.test(homeHtml), '编组弹窗应提供组名输入框');
 assert(/id="saveGroupNameBtn"[\s\S]*保存组名/.test(homeHtml), '编组弹窗应提供保存组名按钮');
 assert(/id="groupPopoverTaskList"/.test(homeHtml), '编组弹窗应提供组内站点卡片列表');
+assert(/id="configBoard"[^>]*class="[^"]*board-popover-layer/.test(homeHtml), '编组弹窗应放在看板自身的浮层定位上下文中，避免脱离展示区错位');
 assert(!/id="siteConfigPanel"|id="groupEditPanel"|id="groupNamePanel"|id="managedSiteList"/.test(homeHtml), '首页不应显示表单、组编辑或旧站点列表');
 assert(!/错误提示/.test(homeHtml), '首页初始不应显示“错误提示”固定区');
 
