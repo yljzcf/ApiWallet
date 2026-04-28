@@ -829,6 +829,16 @@ function createPageApp(options = {}) {
     if (refs.groupPopover) refs.groupPopover.hidden = true;
   }
 
+  function handlePageClickForGroupPopover(event) {
+    if (!refs.groupPopover || refs.groupPopover.hidden) {
+      return;
+    }
+    if (refs.groupPopover.contains(event.target)) {
+      return;
+    }
+    hideGroupPopover();
+  }
+
   function showView(nextView) {
     currentView = nextView;
     if (refs.homePanel) refs.homePanel.hidden = nextView !== 'home';
@@ -1102,7 +1112,8 @@ function createPageApp(options = {}) {
         button.type = 'button';
         button.className = 'site-list-item group-popover-site';
         button.textContent = task.name || '未命名站点';
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', async (event) => {
+          event.stopPropagation?.();
           const card = {
             type: 'task',
             id: task.id,
@@ -1169,8 +1180,9 @@ function createPageApp(options = {}) {
       cardElement.type = 'button';
       cardElement.className = card.type === 'group' ? 'config-board-card is-group' : 'config-board-card';
       cardElement.textContent = card.type === 'group' ? card.name : card.task.name;
-      cardElement.addEventListener('click', async () => {
+      cardElement.addEventListener('click', async (event) => {
         if (card.type === 'group') {
+          event.stopPropagation?.();
           await openGroupPopover(card);
           return;
         }
@@ -1623,11 +1635,12 @@ function createPageApp(options = {}) {
           setEditMessage(formatWizardErrorMessage(error), 'error');
         })
       ));
-      refs.saveGroupNameBtn?.addEventListener('click', () => (
+      refs.saveGroupNameBtn?.addEventListener('click', (event) => {
+        event.stopPropagation?.();
         saveGroupNameFromPopover().catch((error) => {
           setImportMessage(formatWizardErrorMessage(error), 'error');
-        })
-      ));
+        });
+      });
       refs.importFileBtn?.addEventListener('click', handleFileImport);
       refs.importFileInput?.addEventListener('change', handleFileSelected);
       refs.exportSitesBtn?.addEventListener('click', () => {
@@ -1635,6 +1648,7 @@ function createPageApp(options = {}) {
           setEditMessage(formatWizardErrorMessage(error), 'error');
         });
       });
+      pageDocument.addEventListener('click', handlePageClickForGroupPopover);
       updateFormState(controller.getErrorOrAuthChallengeState());
       setMode(DEFAULT_MODE);
       showView('home');

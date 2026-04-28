@@ -116,10 +116,17 @@ function createElementStub(id = '') {
     },
     setAttribute(name, value) { this[name] = value; },
     appendChild(child) {
+      child.parentNode = this;
       this.children.push(child);
       return child;
     },
     replaceChildren(...children) {
+      this.children.forEach((child) => {
+        child.parentNode = null;
+      });
+      children.forEach((child) => {
+        child.parentNode = this;
+      });
       this.children = children;
     },
     remove() {},
@@ -145,7 +152,16 @@ function createElementStub(id = '') {
     querySelector() { return null; },
     querySelectorAll(selector) { return queryMap.get(selector) || []; },
     closest() { return null; },
-    contains() { return false; },
+    contains(node) {
+      let current = node;
+      while (current) {
+        if (current === this) {
+          return true;
+        }
+        current = current.parentNode;
+      }
+      return false;
+    },
     focus() {},
     getBoundingClientRect() {
       return { left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 };
@@ -154,6 +170,7 @@ function createElementStub(id = '') {
 }
 
 function createDocumentStub() {
+  const documentListeners = new Map();
   const ids = [
     'modeCreateBtn',
     'modeEditBtn',
@@ -217,6 +234,9 @@ function createDocumentStub() {
     'editFormulaInput'
   ];
   const elements = new Map(ids.map((id) => [id, createElementStub(id)]));
+  elements.get('groupPopover').appendChild(elements.get('groupPopoverNameInput'));
+  elements.get('groupPopover').appendChild(elements.get('saveGroupNameBtn'));
+  elements.get('groupPopover').appendChild(elements.get('groupPopoverTaskList'));
 
   return {
     elements,
@@ -232,8 +252,19 @@ function createDocumentStub() {
     },
     querySelector() { return null; },
     querySelectorAll() { return []; },
-    addEventListener() {},
-    removeEventListener() {}
+    addEventListener(type, listener) {
+      documentListeners.set(type, listener);
+    },
+    removeEventListener(type) {
+      documentListeners.delete(type);
+    },
+    dispatch(type, event = {}) {
+      const listener = documentListeners.get(type);
+      if (listener) {
+        return listener({ target: this, currentTarget: this, stopPropagation() {}, preventDefault() {}, ...event });
+      }
+      return undefined;
+    }
   };
 }
 
@@ -601,6 +632,16 @@ function loadTestExports() {
     assert.strictEqual(documentStub.elements.get('groupPopover').hidden, false, '点击编组卡片应显示编组弹窗');
     assert.strictEqual(documentStub.elements.get('groupPopoverNameInput').value, '旧组名', '弹窗应填入当前组名');
     assert.strictEqual(documentStub.elements.get('groupPopoverTaskList').children.length, 2, '弹窗应显示组内两张站点卡片');
+
+    documentStub.dispatch('click', { target: documentStub.elements.get('groupPopoverNameInput') });
+    assert.strictEqual(documentStub.elements.get('groupPopover').hidden, false, '点击编组弹窗内部不应关闭弹窗');
+
+    documentStub.dispatch('click', { target: documentStub.elements.get('configBoard') });
+    assert.strictEqual(documentStub.elements.get('groupPopover').hidden, true, '点击编组弹窗外部应自动关闭弹窗');
+
+    await documentStub.elements.get('configBoard').children[0].click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.strictEqual(documentStub.elements.get('groupPopover').hidden, false, '关闭后再次点击编组应能重新打开弹窗');
 
     documentStub.elements.get('groupPopoverNameInput').value = '新组名';
     await documentStub.elements.get('saveGroupNameBtn').click();
