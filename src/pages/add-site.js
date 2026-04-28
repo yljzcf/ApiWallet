@@ -1143,11 +1143,14 @@ function createPageApp(options = {}) {
       return null;
     }
     const snapshot = await boardEditor.loadDraft();
-    refs.configBoard.replaceChildren();
+    const boardChildren = [];
+    if (refs.groupPopover) {
+      boardChildren.push(refs.groupPopover);
+    }
     if (refs.configBoardEmpty) {
       refs.configBoardEmpty.hidden = snapshot.cards.length > 0;
       if (snapshot.cards.length === 0) {
-        refs.configBoard.appendChild(refs.configBoardEmpty);
+        boardChildren.push(refs.configBoardEmpty);
       }
     }
     snapshot.cards.forEach((card) => {
@@ -1162,8 +1165,9 @@ function createPageApp(options = {}) {
         }
         await openSiteEdit(card);
       });
-      refs.configBoard.appendChild(cardElement);
+      boardChildren.push(cardElement);
     });
+    refs.configBoard.replaceChildren(...boardChildren);
     return snapshot;
   }
 

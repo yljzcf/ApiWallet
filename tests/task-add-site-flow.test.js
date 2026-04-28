@@ -487,16 +487,15 @@ function loadTestExports() {
 
     await app.bind();
     const emptyStorageBoard = documentStub.elements.get('configBoard');
-    assert.strictEqual(emptyStorageBoard.children.length, 2, '配置页 storage 为空时应显示两张 demo 示例卡片');
     assert.deepStrictEqual(
-      emptyStorageBoard.children.map((child) => child.textContent),
+      emptyStorageBoard.children.filter((child) => child.id !== 'groupPopover').map((child) => child.textContent),
       ['单击', '长按'],
       '配置页 demo 示例卡片应使用短文案'
     );
     assert.strictEqual(documentStub.elements.get('configBoardEmpty').hidden, true, '显示 demo 卡片时不应展示空状态');
 
     const demoWritesBeforeEdit = storage.getWrites().length;
-    documentStub.elements.get('configBoard').children[0].click();
+    documentStub.elements.get('configBoard').children.find((child) => child.id !== 'groupPopover').click();
     assert.strictEqual(app.getCurrentView(), 'siteForm:edit', '点击 demo 卡片应进入站点编辑页');
     assert.strictEqual(storage.getWrites().length, demoWritesBeforeEdit, '点击 demo 卡片进入编辑页不应写入 storage');
 
@@ -541,9 +540,9 @@ function loadTestExports() {
 
     await app.bind();
     assert.strictEqual(app.getCurrentView(), 'home', '页面初始化后应停留在首页');
-    assert.strictEqual(documentStub.elements.get('configBoard').children.length, 1, '页面初始化应渲染当前卡片到 configBoard');
+    assert.strictEqual(documentStub.elements.get('configBoard').children.filter((child) => child.id !== 'groupPopover').length, 1, '页面初始化应渲染当前卡片到 configBoard');
 
-    documentStub.elements.get('configBoard').children[0].click();
+    documentStub.elements.get('configBoard').children.find((child) => child.id !== 'groupPopover').click();
     assert.strictEqual(app.getCurrentView(), 'siteForm:edit', '点击单张卡片应进入站点配置页');
     assert.strictEqual(documentStub.elements.get('createModePanel').hidden, true, '点击单卡进入配置页时不应显示新增站点面板');
     assert.strictEqual(documentStub.elements.get('editModePanel').hidden, false, '点击单卡进入配置页时应显示修改站点面板');
@@ -553,7 +552,7 @@ function loadTestExports() {
     assert.strictEqual(storage.getSnapshot().siteConfigs[0].calculationExpression, 'X/2', '编辑完成后应保存新的公式表达式');
     assert.strictEqual(app.getCurrentView(), 'home', '编辑完成后应回到首页');
     assert.strictEqual(closeCalled, false, '完成后不应自动关闭配置页');
-    assert.strictEqual(documentStub.elements.get('configBoard').children.length, 1, '完成后应刷新卡片展示区');
+    assert.strictEqual(documentStub.elements.get('configBoard').children.filter((child) => child.id !== 'groupPopover').length, 1, '完成后应刷新卡片展示区');
   }
 
   {
@@ -575,9 +574,10 @@ function loadTestExports() {
     });
 
     await app.bind();
-    documentStub.elements.get('configBoard').children[0].click();
+    documentStub.elements.get('configBoard').children.find((child) => child.id !== 'groupPopover').click();
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.strictEqual(app.getCurrentView(), 'home', '点击编组卡片后应继续停留在首页');
+    assert(documentStub.elements.get('configBoard').children.includes(documentStub.elements.get('groupPopover')), '编组弹窗应始终保留在看板内部，而不是被刷新移出或丢失');
     assert.strictEqual(documentStub.elements.get('groupPopover').hidden, false, '点击编组卡片应显示编组弹窗');
     assert.strictEqual(documentStub.elements.get('groupPopoverNameInput').value, '旧组名', '弹窗应填入当前组名');
     assert.strictEqual(documentStub.elements.get('groupPopoverTaskList').children.length, 2, '弹窗应显示组内两张站点卡片');
@@ -659,7 +659,7 @@ function loadTestExports() {
     });
 
     await app.bind();
-    documentStub.elements.get('configBoard').children[0].click();
+    documentStub.elements.get('configBoard').children.find((child) => child.id !== 'groupPopover').click();
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.strictEqual(documentStub.elements.get('rawValueText').textContent, '1.00', '编辑页进入时应展示当前卡片值');
 
@@ -690,7 +690,7 @@ function loadTestExports() {
     });
 
     await app.bind();
-    documentStub.elements.get('configBoard').children[0].click();
+    documentStub.elements.get('configBoard').children.find((child) => child.id !== 'groupPopover').click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     await documentStub.elements.get('fetchRawValueBtn').click();
@@ -702,7 +702,7 @@ function loadTestExports() {
     assert.strictEqual(storage.getSnapshot().siteConfigs[0].formula, undefined, '保存后不应保留公式配置');
     assert.strictEqual(storage.getSnapshot().siteConfigs[0].divideBy, undefined, '保存后不应保留 divideBy');
 
-    documentStub.elements.get('configBoard').children[0].click();
+    documentStub.elements.get('configBoard').children.find((child) => child.id !== 'groupPopover').click();
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.strictEqual(documentStub.elements.get('rawValueText').textContent, '1.00', '重新进入编辑页时应先展示当前卡片值');
 
@@ -746,7 +746,7 @@ function loadTestExports() {
       listeners.forEach((listener) => listener({ target: this, currentTarget: this, stopPropagation() {}, preventDefault() {} }));
     };
     await documentStub.elements.get('modeEditBtn').click();
-    documentStub.elements.get('configBoard').children[0].click();
+    documentStub.elements.get('configBoard').children.find((child) => child.id !== 'groupPopover').click();
     assert.strictEqual(app.getCurrentView(), 'siteForm:edit', '点击单卡应进入站点配置页');
 
     await documentStub.elements.get('deleteSiteBtn').click();
@@ -778,7 +778,7 @@ function loadTestExports() {
 
     await app.bind();
     const writesBeforeCancel = storage.getWrites().length;
-    documentStub.elements.get('configBoard').children[0].click();
+    documentStub.elements.get('configBoard').children.find((child) => child.id !== 'groupPopover').click();
     assert.strictEqual(app.getCurrentView(), 'siteForm:edit', '点击单卡应进入站点配置页');
 
     documentStub.elements.get('backHomeBtn').click();
