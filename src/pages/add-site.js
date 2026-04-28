@@ -70,6 +70,10 @@ function createDomRefs(doc = document) {
     groupNameInput: doc.getElementById('groupNameInput'),
     groupTaskNameList: doc.getElementById('groupTaskNameList'),
     finishGroupEditBtn: doc.getElementById('finishGroupEditBtn'),
+    groupPopover: doc.getElementById('groupPopover'),
+    groupPopoverNameInput: doc.getElementById('groupPopoverNameInput'),
+    saveGroupNameBtn: doc.getElementById('saveGroupNameBtn'),
+    groupPopoverTaskList: doc.getElementById('groupPopoverTaskList'),
     selectedSiteBadge: doc.getElementById('selectedSiteBadge'),
     editSiteNameInput: doc.getElementById('editSiteNameInput'),
     editSiteUrlInput: doc.getElementById('editSiteUrlInput'),
@@ -693,7 +697,7 @@ function createBoardEditorController(options = {}) {
 
     resolveCardClick(itemId, event = {}) {
       if (event.target === 'group-frame' && draftGroups.some((group) => group.id === itemId)) {
-        return { view: 'groupEdit', groupId: itemId };
+        return { view: 'groupPopover', groupId: itemId };
       }
       if (draftSiteConfigs.some((task) => task.id === itemId)) {
         return { view: 'siteForm:edit', taskId: itemId };
@@ -807,11 +811,18 @@ function createPageApp(options = {}) {
   let lastTestedExpression = '';
   let lastCalculatedValue = null;
 
+  function hideGroupPopover() {
+    if (refs.groupPopover) refs.groupPopover.hidden = true;
+  }
+
   function showView(nextView) {
     currentView = nextView;
     if (refs.homePanel) refs.homePanel.hidden = nextView !== 'home';
     if (refs.siteConfigPanel) refs.siteConfigPanel.hidden = !nextView.startsWith('siteForm') && !nextView.startsWith('calculation');
     if (refs.groupEditPanel) refs.groupEditPanel.hidden = nextView !== 'groupEdit';
+    if (nextView !== 'home') {
+      hideGroupPopover();
+    }
   }
 
   function setMode(nextMode) {
@@ -1055,6 +1066,47 @@ function createPageApp(options = {}) {
     showView('siteForm:new');
   }
 
+  async function openGroupPopover(group) {
+    const groupId = typeof group === 'string' ? group : group.id;
+    const knownGroupCard = typeof group === 'string' ? null : group;
+    selectedSiteId = null;
+    selectedGroupId = groupId;
+    showView('home');
+
+    const snapshot = await boardEditor.loadDraft();
+    const groupCard = knownGroupCard || snapshot.cards.find((card) => card.type === 'group' && card.id === groupId);
+    if (!groupCard) {
+      throw createTaskError('未找到编组。', { kind: 'validation' });
+    }
+
+    if (refs.groupPopoverNameInput) {
+      refs.groupPopoverNameInput.value = groupCard.name || '';
+    }
+    if (refs.groupPopoverTaskList) {
+      const taskButtons = groupCard.tasks.map((task) => {
+        const button = pageDocument.createElement('button');
+        button.type = 'button';
+        button.className = 'site-list-item group-popover-site';
+        button.textContent = task.name || '未命名站点';
+        button.addEventListener('click', async () => {
+          const card = {
+            type: 'task',
+            id: task.id,
+            task,
+            value: snapshot.boardData?.[task.id]
+          };
+          hideGroupPopover();
+          await openSiteEdit(card);
+        });
+        return button;
+      });
+      refs.groupPopoverTaskList.replaceChildren(...taskButtons);
+    }
+    if (refs.groupPopover) {
+      refs.groupPopover.hidden = false;
+    }
+  }
+
   async function openGroupEdit(group) {
     const groupId = typeof group === 'string' ? group : group.id;
     const knownGroupCard = typeof group === 'string' ? null : group;
@@ -1105,7 +1157,7 @@ function createPageApp(options = {}) {
       cardElement.textContent = card.type === 'group' ? card.name : card.task.name;
       cardElement.addEventListener('click', async () => {
         if (card.type === 'group') {
-          await openGroupEdit(card);
+          await openGroupPopover(card);
           return;
         }
         await openSiteEdit(card);
@@ -1271,6 +1323,28 @@ function createPageApp(options = {}) {
     const result = await siteManager.testSiteDraft(readEditDraftFromInputs());
     updateEditPreview(result);
     setEditMessage('测试成功，确认无误后可以直接保存修改。', 'success');
+  }
+
+  async function saveGroupNameFromPopover() {
+    if (!selectedGroupId) {
+      throw createTaskError('请先选择需要修改的编组。', { kind: 'validation' });
+    }
+    const groupId = selectedGroupId;
+    await boardEditor.loadDraft();
+    const groupName = refs.groupPopoverNameInput?.value || '';
+    const renamedSnapshot = boardEditor.renameDraftGroup(groupId, groupName);
+    if (groupName.trim() && !renamedSnapshot.groups.some((group) => group.id === groupId && group.name === groupName.trim())) {
+      throw createTaskError('编组名称保存失败。', { kind: 'validation' });
+    }
+    await boardEditor.saveDraftToBoard();
+    await renderConfigBoard();
+    selectedGroupId = groupId;
+    const snapshot = await boardEditor.loadDraft();
+    const groupCard = snapshot.cards.find((card) => card.type === 'group' && card.id === groupId);
+    if (refs.groupPopoverNameInput && groupCard) {
+      refs.groupPopoverNameInput.value = groupCard.name || '';
+    }
+    if (refs.groupPopover) refs.groupPopover.hidden = false;
   }
 
   async function finishGroupEdit() {
@@ -1565,6 +1639,11 @@ function createPageApp(options = {}) {
       refs.finishGroupEditBtn?.addEventListener('click', () => (
         finishGroupEdit().catch((error) => {
           setEditMessage(formatWizardErrorMessage(error), 'error');
+        })
+      ));
+      refs.saveGroupNameBtn?.addEventListener('click', () => (
+        saveGroupNameFromPopover().catch((error) => {
+          setImportMessage(formatWizardErrorMessage(error), 'error');
         })
       ));
       refs.importFileBtn?.addEventListener('click', handleFileImport);

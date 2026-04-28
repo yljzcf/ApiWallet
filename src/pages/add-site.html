@@ -502,6 +502,35 @@
       background: var(--panel-soft);
     }
 
+    .group-popover {
+      width: min(100%, 420px);
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-strong);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .group-popover-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .group-popover-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .group-popover-site {
+      min-height: 56px;
+      justify-content: flex-start;
+      text-align: left;
+    }
+
     .editor-panels {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 320px;
@@ -647,6 +676,17 @@
           </div>
 
           <div id="importMessage" class="message" role="alert" hidden></div>
+
+          <div id="groupPopover" class="group-popover" aria-label="编组编辑弹窗" hidden>
+            <div class="group-popover-row">
+              <label class="field">
+                <span class="label">编组名</span>
+                <input id="groupPopoverNameInput" type="text" placeholder="例如：工作组" autocomplete="off">
+              </label>
+              <button id="saveGroupNameBtn" class="primary-btn" type="button">保存组名</button>
+            </div>
+            <div id="groupPopoverTaskList" class="group-popover-list"></div>
+          </div>
 
           <div id="configBoard" class="config-board" aria-label="当前卡片看板">
             <div id="configBoardEmpty" class="config-board-empty">当前没有站点卡片。可以导入配置，或点击“新增站点”创建。</div>

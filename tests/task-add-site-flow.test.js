@@ -196,6 +196,10 @@ function createDocumentStub() {
     'groupNameInput',
     'groupTaskNameList',
     'finishGroupEditBtn',
+    'groupPopover',
+    'groupPopoverNameInput',
+    'saveGroupNameBtn',
+    'groupPopoverTaskList',
     'createBackHomeBtn',
     'backHomeBtn',
     'editSiteNameInput',
@@ -449,7 +453,7 @@ function loadTestExports() {
     assert.strictEqual(initialBoard.cards[0].type, 'group', '已有编组应显示为组卡片');
 
     const groupRoute = editor.resolveCardClick('group:1', { target: 'group-frame' });
-    assert.deepStrictEqual(JSON.parse(JSON.stringify(groupRoute)), { view: 'groupEdit', groupId: 'group:1' }, '点击编组外框应进入组编辑页');
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(groupRoute)), { view: 'groupPopover', groupId: 'group:1' }, '点击编组外框应打开组名弹窗');
 
     const innerCardRoute = editor.resolveCardClick('custom-a', { target: 'group-card' });
     assert.deepStrictEqual(JSON.parse(JSON.stringify(innerCardRoute)), { view: 'siteForm:edit', taskId: 'custom-a' }, '点击编组内卡片应进入单站点配置页');
@@ -572,13 +576,24 @@ function loadTestExports() {
 
     await app.bind();
     documentStub.elements.get('configBoard').children[0].click();
-    assert.strictEqual(app.getCurrentView(), 'groupEdit', '点击编组卡片应进入编组配置页');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.strictEqual(app.getCurrentView(), 'home', '点击编组卡片后应继续停留在首页');
+    assert.strictEqual(documentStub.elements.get('groupPopover').hidden, false, '点击编组卡片应显示编组弹窗');
+    assert.strictEqual(documentStub.elements.get('groupPopoverNameInput').value, '旧组名', '弹窗应填入当前组名');
+    assert.strictEqual(documentStub.elements.get('groupPopoverTaskList').children.length, 2, '弹窗应显示组内两张站点卡片');
 
-    documentStub.elements.get('groupNameInput').value = '新组名';
-    await documentStub.elements.get('finishGroupEditBtn').click();
-    assert.strictEqual(app.getCurrentView(), 'home', '编组配置点击完成后应返回首页');
-    assert.strictEqual(documentStub.elements.get('groupEditPanel').hidden, true, '返回首页后应隐藏编组配置页');
-    assert.strictEqual(storage.getSnapshot().groups[0].name, '新组名', '编组完成后应保存新组名');
+    documentStub.elements.get('groupPopoverNameInput').value = '新组名';
+    await documentStub.elements.get('saveGroupNameBtn').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.strictEqual(app.getCurrentView(), 'home', '保存组名后应仍停留在首页');
+    assert.strictEqual(documentStub.elements.get('groupPopover').hidden, false, '保存组名后应保持弹窗可见');
+    assert.strictEqual(storage.getSnapshot().groups[0].name, '新组名', '弹窗保存后应保存新组名');
+
+    await documentStub.elements.get('groupPopoverTaskList').children[1].click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.strictEqual(app.getCurrentView(), 'siteForm:edit', '点击弹窗内站点卡片应进入对应单站点配置页');
+    assert.strictEqual(documentStub.elements.get('groupPopover').hidden, true, '进入单站点配置页后应隐藏编组弹窗');
+    assert.strictEqual(documentStub.elements.get('siteNameInput').value, '站点 B', '点击第二张站点卡片应选中对应站点');
   }
 
   {
