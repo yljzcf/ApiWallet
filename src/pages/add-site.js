@@ -10,6 +10,7 @@ const {
   buildManagedTaskConfig,
   normalizeSiteConfigs,
   serializeSiteConfigs,
+  serializePublicSiteConfigs,
   buildPersistedSiteConfigsFromRuntime,
   mergeStoredSiteConfigs,
   buildUpdatedSiteConfigs,
@@ -1387,7 +1388,7 @@ function createPageApp(options = {}) {
     const exportedGroupIds = new Set(exportedGroups.map((group) => group.id));
 
     return {
-      siteConfigs: serializeSiteConfigs(exportedSites),
+      siteConfigs: serializePublicSiteConfigs(exportedSites),
       groups: exportedGroups,
       manualOrder: snapshot.manualOrder.filter((itemId) => {
         if (itemId.startsWith('task:')) {

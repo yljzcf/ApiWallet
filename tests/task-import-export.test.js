@@ -344,6 +344,20 @@ function loadTestExports() {
   ]));
   assert(exportStorage.getSnapshot().siteConfigs.some((task) => task.id === 'custom-array-import'), '页面应兼容旧数组格式导入');
 
+  await app.importSiteConfigsFromText(JSON.stringify([
+    {
+      id: 'custom-value-path-import',
+      name: '新格式导入站点',
+      url: 'https://demo.test/api/value-path',
+      type: 'json',
+      valuePath: 'data.quota'
+    }
+  ]));
+  const valuePathImported = exportStorage.getSnapshot().siteConfigs.find((task) => task.id === 'custom-value-path-import');
+  assert(valuePathImported, '页面应兼容 valuePath 新格式导入');
+  assert.strictEqual(valuePathImported.fieldPath, 'data.quota', '导入 valuePath 后应恢复为内部 fieldPath');
+  assert.strictEqual(valuePathImported.isCustom, true, '导入 valuePath 后应写入 isCustom');
+
   let pageImportError = null;
   try {
     await app.importSiteConfigsFromText('{ bad json');
@@ -362,8 +376,11 @@ function loadTestExports() {
   const exportedJson = JSON.parse(blobText);
   assert(Array.isArray(exportedJson.siteConfigs), '导出应使用完整看板包格式');
   assert(exportedJson.siteConfigs.every((task) => task.isDemo !== true), '导出配置时应过滤 demo 站点');
+  assert(exportedJson.siteConfigs.every((task) => task.isCustom !== true), '导出站点不应暴露 isCustom 内部字段');
+  assert(exportedJson.siteConfigs.every((task) => !Object.prototype.hasOwnProperty.call(task, 'fieldPath')), '导出站点不应暴露 fieldPath 技术字段名');
   assert(exportedJson.siteConfigs.some((task) => task.id === 'custom-export'), '导出配置时应包含普通站点');
   assert(exportedJson.siteConfigs.some((task) => task.id === 'custom-array-import'), '导出配置时应包含新导入站点');
+  assert.strictEqual(exportedJson.siteConfigs.find((task) => task.id === 'custom-export').valuePath, 'data.quota', '导出站点应使用 valuePath 表达取值路径');
   assert(exportedJson.groups.every((group) => group.taskIds.every((taskId) => taskId !== 'demo-click-refresh')), '导出 groups 应过滤 demo');
   assert(exportedJson.manualOrder.every((itemId) => itemId !== 'task:demo-click-refresh'), '导出 manualOrder 应过滤 demo');
   assert(!Object.prototype.hasOwnProperty.call(exportedJson.boardData, 'demo-click-refresh'), '导出 boardData 应过滤 demo');
