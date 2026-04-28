@@ -1037,7 +1037,7 @@ function createPageApp(options = {}) {
     if (refs.editSiteFieldPathInput) refs.editSiteFieldPathInput.value = site.fieldPath || '';
     if (refs.calculationExpressionInput) refs.calculationExpressionInput.value = site.calculationExpression || '';
     fillAuthHeaderInputs(site.headers);
-    if (refs.deleteSiteBtn) refs.deleteSiteBtn.hidden = !site.id || isDemoTask(site);
+    if (refs.deleteSiteBtn) refs.deleteSiteBtn.hidden = !site.id;
     resetUnifiedPreview();
     resetCalculationState();
     setAdvancedSettingsExpanded(false);

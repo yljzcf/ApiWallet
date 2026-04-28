@@ -51,6 +51,7 @@ const fieldIndex = siteFormHtml.indexOf('监控字段');
 assert(nameIndex !== -1 && urlIndex !== -1 && fieldIndex !== -1, '单站点配置页面应包含站点名、接口地址和监控字段');
 assert(nameIndex < urlIndex && urlIndex < fieldIndex, '新增站点字段顺序必须是：站点名 → 接口地址 → 监控字段');
 assert(/id="authHeaderSelect"[\s\S]*authorization[\s\S]*token[\s\S]*new-api-user/.test(html), '鉴权字段应使用包含三种选项的下拉框');
+assert(/#authHeaderSelect\s+option\s*\{[\s\S]*color:\s*#111827;[\s\S]*background-color:\s*#ffffff;[\s\S]*\}/.test(html), '鉴权字段下拉选项应使用深色文字和浅色背景');
 assert(/id="authHeaderValueInput"/.test(html), '单站点配置页应提供鉴权字段值输入框');
 assert(!/错误提示/.test(siteFormHtml), '单站点配置页初始不应显示“错误提示”文案');
 

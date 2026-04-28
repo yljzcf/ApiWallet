@@ -529,10 +529,13 @@ function loadTestExports() {
     const demoWritesBeforeEdit = storage.getWrites().length;
     documentStub.elements.get('configBoard').children[0].click();
     assert.strictEqual(app.getCurrentView(), 'siteForm:edit', '点击 demo 卡片应进入站点编辑页');
-    assert.strictEqual(storage.getWrites().length, demoWritesBeforeEdit, '点击 demo 卡片进入编辑页不应写入 storage');
-
-    documentStub.elements.get('backHomeBtn').click();
-    assert.strictEqual(app.getCurrentView(), 'home', '从 demo 编辑页取消后应返回首页');
+    assert.strictEqual(documentStub.elements.get('deleteSiteBtn').hidden, false, 'demo 卡片进入编辑页后应能看到删除按钮');
+    await documentStub.elements.get('deleteSiteBtn').click();
+    const afterDemoDeleteSnapshot = storage.getSnapshot();
+    assert(!afterDemoDeleteSnapshot.siteConfigs.some((task) => task.id === 'demo-click-refresh'), '删除 demo 卡片后应从 siteConfigs 移除');
+    assert.strictEqual(afterDemoDeleteSnapshot.boardData['demo-click-refresh'], undefined, '删除 demo 卡片后应清理对应 boardData');
+    assert.strictEqual(afterDemoDeleteSnapshot._demoInjected, undefined, '配置页内临时 demo 删除不应写入首次注入标记');
+    assert.strictEqual(storage.getWrites().length, demoWritesBeforeEdit + 1, '删除 demo 卡片应只写入一次 storage');
 
     documentStub.elements.get('addSiteConfigBtn').click();
     assert.strictEqual(app.getCurrentView(), 'siteForm:new', '点击新增站点按钮应进入新增站点配置页');
