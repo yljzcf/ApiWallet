@@ -341,6 +341,16 @@
     return normalizedConfig;
   }
 
+  function getExportValuePath(task) {
+    if (typeof task?.fieldPath === 'string' && task.fieldPath.trim()) {
+      return task.fieldPath.trim();
+    }
+    if (typeof task?.valuePath === 'string' && task.valuePath.trim()) {
+      return task.valuePath.trim();
+    }
+    return '';
+  }
+
   function normalizeSiteConfigs(value) {
     if (!Array.isArray(value)) {
       return [];
@@ -349,13 +359,14 @@
     return value
       .filter((task) => task && typeof task === 'object' && typeof task.id === 'string')
       .map((task) => {
+        const fieldPath = getExportValuePath(task);
         const normalizedTask = {
           id: task.id.trim(),
           ...(typeof task.name === 'string' && task.name.trim() ? { name: task.name.trim() } : {}),
           ...(typeof task.url === 'string' && task.url.trim() ? { url: task.url.trim() } : {}),
           ...(task.type === 'json' || task.type === 'html' ? { type: task.type } : {}),
           ...(normalizeHeaders(task.headers) ? { headers: normalizeHeaders(task.headers) } : {}),
-          ...(typeof task.fieldPath === 'string' && task.fieldPath.trim() ? { fieldPath: task.fieldPath.trim() } : {}),
+          ...(fieldPath ? { fieldPath } : {}),
           ...(normalizeCalculationExpression(task.calculationExpression) ? { calculationExpression: normalizeCalculationExpression(task.calculationExpression) } : {}),
           ...(task.isCustom === true ? { isCustom: true } : {}),
           ...(task.isDemo === true ? { isDemo: true } : {})
@@ -383,6 +394,20 @@
       return {
         ...baseTask,
         type: baseTask.type || 'json'
+      };
+    });
+  }
+
+  function serializePublicSiteConfigs(siteConfigs) {
+    return siteConfigs.map((task) => {
+      const valuePath = getExportValuePath(task);
+      return {
+        ...(typeof task.name === 'string' && task.name.trim() ? { name: task.name.trim() } : {}),
+        ...(typeof task.url === 'string' && task.url.trim() ? { url: task.url.trim() } : {}),
+        type: task.type === 'html' ? 'html' : 'json',
+        ...(normalizeHeaders(task.headers) ? { headers: normalizeHeaders(task.headers) } : {}),
+        ...(valuePath ? { valuePath } : {}),
+        ...(normalizeCalculationExpression(task.calculationExpression) ? { calculationExpression: normalizeCalculationExpression(task.calculationExpression) } : {})
       };
     });
   }
@@ -501,6 +526,7 @@
     buildCustomTaskConfig,
     normalizeSiteConfigs,
     serializeSiteConfigs,
+    serializePublicSiteConfigs,
     buildPersistedSiteConfigsFromRuntime,
     mergeStoredSiteConfigs,
     buildUpdatedSiteConfigs,
