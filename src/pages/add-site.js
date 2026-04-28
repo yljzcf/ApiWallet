@@ -636,12 +636,14 @@ function buildDraftCards(siteConfigs, groups, manualOrder, boardData = {}) {
         if (!group) {
           return null;
         }
+        const tasks = group.taskIds.map((taskId) => siteById.get(taskId)).filter(Boolean);
+        const fallbackName = tasks.map((task) => task.name).filter(Boolean).join(' + ');
         return {
           type: 'group',
           id: group.id,
-          name: group.name || '编组',
+          name: group.name || fallbackName || '编组',
           taskIds: [...group.taskIds],
-          tasks: group.taskIds.map((taskId) => siteById.get(taskId)).filter(Boolean)
+          tasks
         };
       }
 
@@ -1156,9 +1158,6 @@ function createPageApp(options = {}) {
     }
     const snapshot = await boardEditor.loadDraft();
     const boardChildren = [];
-    if (refs.groupPopover) {
-      boardChildren.push(refs.groupPopover);
-    }
     if (refs.configBoardEmpty) {
       refs.configBoardEmpty.hidden = snapshot.cards.length > 0;
       if (snapshot.cards.length === 0) {
