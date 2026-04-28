@@ -254,6 +254,15 @@ function buildTaskFromEditableDraft(siteDraft) {
     : buildManagedTaskConfig(baseTask);
 }
 
+function createUniqueImportedSiteId(existingIds) {
+  let id = `custom-${Date.now()}`;
+  while (existingIds.has(id)) {
+    id = `custom-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+  }
+  existingIds.add(id);
+  return id;
+}
+
 async function loadStoredSiteConfigs(storage) {
   const stored = await storage.get(['siteConfigs']);
   return Array.isArray(stored.siteConfigs) ? stored.siteConfigs : [];
@@ -501,13 +510,15 @@ function createSiteManagerController(options = {}) {
       if (!Array.isArray(rawConfigs)) {
         throw createTaskError('导入文件必须是站点配置数组。', { kind: 'validation' });
       }
-      const importedConfigs = normalizeSiteConfigs(rawConfigs).map((task) => ({
+      const storedSiteConfigs = await getStoredSiteConfigs();
+      const existingIds = new Set(normalizeSiteConfigs(storedSiteConfigs).map((task) => task.id));
+      const importedConfigs = rawConfigs.map((task) => ({
         ...task,
+        id: typeof task?.id === 'string' && task.id.trim() ? task.id.trim() : createUniqueImportedSiteId(existingIds),
         isCustom: true
       }));
-      const storedSiteConfigs = await getStoredSiteConfigs();
       const existingById = new Map(normalizeSiteConfigs(storedSiteConfigs).map((task) => [task.id, task]));
-      importedConfigs.forEach((task) => existingById.set(task.id, task));
+      normalizeSiteConfigs(importedConfigs).forEach((task) => existingById.set(task.id, task));
       const nextPersistedSiteConfigs = normalizeSiteConfigs([...existingById.values()]);
       await storage.set({ siteConfigs: nextPersistedSiteConfigs });
       return { importedCount: importedConfigs.length };
@@ -1365,12 +1376,7 @@ function createPageApp(options = {}) {
     }
 
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.siteConfigs)) {
-      return {
-        siteConfigs: parsed.siteConfigs,
-        ...(parsed.boardData && typeof parsed.boardData === 'object' ? { boardData: parsed.boardData } : {}),
-        ...(Array.isArray(parsed.groups) ? { groups: parsed.groups } : {}),
-        ...(Array.isArray(parsed.manualOrder) ? { manualOrder: parsed.manualOrder } : {})
-      };
+      return { siteConfigs: parsed.siteConfigs };
     }
 
     throw createTaskError('导入文件必须是站点配置数组或完整看板配置。', { kind: 'validation' });
@@ -1378,30 +1384,9 @@ function createPageApp(options = {}) {
 
   function buildExportBoardPayload(snapshot) {
     const exportedSites = snapshot.siteConfigs.filter((task) => !isDemoTask(task));
-    const exportedTaskIds = new Set(exportedSites.map((task) => task.id));
-    const exportedGroups = snapshot.groups
-      .map((group) => ({
-        ...group,
-        taskIds: group.taskIds.filter((taskId) => exportedTaskIds.has(taskId))
-      }))
-      .filter((group) => group.taskIds.length >= 2);
-    const exportedGroupIds = new Set(exportedGroups.map((group) => group.id));
 
     return {
-      siteConfigs: serializePublicSiteConfigs(exportedSites),
-      groups: exportedGroups,
-      manualOrder: snapshot.manualOrder.filter((itemId) => {
-        if (itemId.startsWith('task:')) {
-          return exportedTaskIds.has(itemId.slice('task:'.length));
-        }
-        if (itemId.startsWith('group:')) {
-          return exportedGroupIds.has(itemId);
-        }
-        return false;
-      }),
-      boardData: Object.fromEntries(
-        Object.entries(snapshot.boardData || {}).filter(([taskId]) => exportedTaskIds.has(taskId))
-      )
+      siteConfigs: serializePublicSiteConfigs(exportedSites)
     };
   }
 
@@ -1419,19 +1404,12 @@ function createPageApp(options = {}) {
       const payload = buildImportedBoardPayload(parsed);
       const result = await siteManager.importSiteConfigs(payload.siteConfigs);
       const stored = await boardEditor.loadDraft();
-      const useImportedBoardState = Boolean(payload.boardData || payload.groups || payload.manualOrder);
-      const hasCompleteBoardPackage = Boolean(payload.boardData && payload.groups && payload.manualOrder);
-      const nextSnapshot = sanitizeDraftBoardState({
-        siteConfigs: stored.siteConfigs,
-        boardData: payload.boardData || (useImportedBoardState ? {} : stored.boardData),
-        groups: payload.groups || (useImportedBoardState ? [] : stored.groups),
-        manualOrder: payload.manualOrder || (useImportedBoardState ? [] : stored.manualOrder)
-      });
+      const nextSnapshot = sanitizeDraftBoardState(stored);
       await (options.storage?.local ? options.storage.local : (options.storage || chrome.storage.local)).set({
         siteConfigs: nextSnapshot.siteConfigs,
         boardData: nextSnapshot.boardData,
         groups: nextSnapshot.groups,
-        manualOrder: hasCompleteBoardPackage ? payload.manualOrder : nextSnapshot.manualOrder
+        manualOrder: nextSnapshot.manualOrder
       });
       await renderManagedSiteList();
       await renderConfigBoard();

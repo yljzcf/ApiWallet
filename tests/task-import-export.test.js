@@ -327,8 +327,9 @@ function loadTestExports() {
   }));
   const importedSnapshot = exportStorage.getSnapshot();
   assert(importedSnapshot.siteConfigs.some((task) => task.id === 'custom-imported'), '页面导入完整包后应写入 storage');
-  assert.strictEqual(importedSnapshot.boardData['custom-imported'], '8.00', '页面导入完整包后应写入 boardData');
-  assert.deepStrictEqual(importedSnapshot.manualOrder, ['task:custom-imported'], '页面导入完整包后应写入 manualOrder');
+  assert.strictEqual(importedSnapshot.boardData['custom-imported'], undefined, '页面导入完整包后不应写入导入文件中的 boardData');
+  assert.deepStrictEqual(importedSnapshot.manualOrder.slice(0, 2), ['task:demo-click-refresh', 'group:test'], '页面导入完整包后不应替换已有 manualOrder');
+  assert(importedSnapshot.manualOrder.includes('task:custom-imported'), '页面导入完整包后应把新站点追加进 manualOrder');
   assert.strictEqual(refs.importMessage.hidden, false, '导入后应显示结果消息');
   assert(/导入/.test(refs.importMessage.textContent), '导入消息应提示导入结果');
   assert(refs.configBoard.children.length > 0, '导入后应刷新首页卡片展示区');
@@ -374,16 +375,41 @@ function loadTestExports() {
   assert.strictEqual(clickedAnchors.length, 1, '导出时应触发下载');
   const blobText = objectUrls[0].parts.join('');
   const exportedJson = JSON.parse(blobText);
-  assert(Array.isArray(exportedJson.siteConfigs), '导出应使用完整看板包格式');
+  assert(Array.isArray(exportedJson.siteConfigs), '导出应使用站点配置包格式');
   assert(exportedJson.siteConfigs.every((task) => task.isDemo !== true), '导出配置时应过滤 demo 站点');
   assert(exportedJson.siteConfigs.every((task) => task.isCustom !== true), '导出站点不应暴露 isCustom 内部字段');
+  assert(exportedJson.siteConfigs.every((task) => !Object.prototype.hasOwnProperty.call(task, 'id')), '导出站点不应暴露内部 id');
   assert(exportedJson.siteConfigs.every((task) => !Object.prototype.hasOwnProperty.call(task, 'fieldPath')), '导出站点不应暴露 fieldPath 技术字段名');
-  assert(exportedJson.siteConfigs.some((task) => task.id === 'custom-export'), '导出配置时应包含普通站点');
-  assert(exportedJson.siteConfigs.some((task) => task.id === 'custom-array-import'), '导出配置时应包含新导入站点');
-  assert.strictEqual(exportedJson.siteConfigs.find((task) => task.id === 'custom-export').valuePath, 'data.quota', '导出站点应使用 valuePath 表达取值路径');
-  assert(exportedJson.groups.every((group) => group.taskIds.every((taskId) => taskId !== 'demo-click-refresh')), '导出 groups 应过滤 demo');
-  assert(exportedJson.manualOrder.every((itemId) => itemId !== 'task:demo-click-refresh'), '导出 manualOrder 应过滤 demo');
-  assert(!Object.prototype.hasOwnProperty.call(exportedJson.boardData, 'demo-click-refresh'), '导出 boardData 应过滤 demo');
+  assert(!Object.prototype.hasOwnProperty.call(exportedJson, 'groups'), '导出站点包不应包含看板编组');
+  assert(!Object.prototype.hasOwnProperty.call(exportedJson, 'manualOrder'), '导出站点包不应包含看板排序');
+  assert(!Object.prototype.hasOwnProperty.call(exportedJson, 'boardData'), '导出站点包不应包含看板数据');
+  assert(exportedJson.siteConfigs.some((task) => task.name === '导出站点'), '导出配置时应包含普通站点');
+  assert(exportedJson.siteConfigs.some((task) => task.name === '数组导入站点'), '导出配置时应包含新导入站点');
+  assert.strictEqual(exportedJson.siteConfigs.find((task) => task.name === '导出站点').valuePath, 'data.quota', '导出站点应使用 valuePath 表达取值路径');
+
+  await app.importSiteConfigsFromText(JSON.stringify({
+    siteConfigs: [
+      {
+        name: '无编号导入站点',
+        url: 'https://demo.test/api/no-id',
+        type: 'json',
+        valuePath: 'data.balance'
+      }
+    ],
+    boardData: { 'external-id': '99.00' },
+    groups: [{ id: 'group:external', taskIds: ['external-id', 'custom-export'], name: '外部组' }],
+    manualOrder: ['task:external-id']
+  }));
+  const noIdSnapshot = exportStorage.getSnapshot();
+  const noIdImported = noIdSnapshot.siteConfigs.find((task) => task.name === '无编号导入站点');
+  assert(noIdImported, '无 id 新格式站点应导入成功');
+  assert(/^custom-/.test(noIdImported.id), '无 id 新格式站点导入后应自动生成内部 id');
+  assert.strictEqual(noIdImported.fieldPath, 'data.balance', '无 id 新格式站点导入后应恢复为内部 fieldPath');
+  assert.strictEqual(noIdImported.isCustom, true, '无 id 新格式站点导入后应写入 isCustom');
+  assert.strictEqual(noIdSnapshot.boardData['demo-click-refresh'], '点我', '导入完整包时不应替换现有 boardData');
+  assert.deepStrictEqual(noIdSnapshot.groups, [{ id: 'group:test', name: '导出组', taskIds: ['custom-export', 'custom-board-b'] }], '导入完整包时不应替换现有 groups');
+  assert.deepStrictEqual(noIdSnapshot.manualOrder.slice(0, 2), ['task:demo-click-refresh', 'group:test'], '导入完整包时不应替换现有 manualOrder');
+  assert(noIdSnapshot.manualOrder.includes(`task:${noIdImported.id}`), '导入完整包时应把无 id 新站点追加进 manualOrder');
 
   const boardStorage = createStorageMock({
     siteConfigs: [

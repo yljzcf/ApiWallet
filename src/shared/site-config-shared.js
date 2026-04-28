@@ -402,7 +402,6 @@
     return siteConfigs.map((task) => {
       const valuePath = getExportValuePath(task);
       return {
-        id: String(task.id || '').trim(),
         ...(typeof task.name === 'string' && task.name.trim() ? { name: task.name.trim() } : {}),
         ...(typeof task.url === 'string' && task.url.trim() ? { url: task.url.trim() } : {}),
         type: task.type === 'html' ? 'html' : 'json',
