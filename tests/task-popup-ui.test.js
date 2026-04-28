@@ -21,7 +21,7 @@ assert(/<script src="\.\.\/shared\/site-config-shared\.js"><\/script>[\s\S]*<scr
 
 const popupJs = fs.readFileSync(path.join(projectRoot, 'src/pages/popup.js'), 'utf8');
 assert(!popupJs.includes('addSiteWizard'), 'popup.js 中不应再保留 addSiteWizard 相关逻辑');
-assert(/addSiteBtn\?\.addEventListener\('click', \(\) => \{[\s\S]*chrome\.tabs\.create\(\{\s*url:\s*'add-site\.html'\s*\}\);[\s\S]*\}\);/.test(popupJs), '站点按钮应打开独立的 add-site.html 页面');
+assert(/addSiteBtn\?\.addEventListener\('click', \(\) => \{[\s\S]*chrome\.tabs\.create\(\{\s*url:\s*chrome\.runtime\.getURL\('src\/pages\/add-site\.html'\)\s*\}\);[\s\S]*\}\);/.test(popupJs), '站点按钮应打开 src/pages/add-site.html 页面');
 assert(!/body\.innerHTML\s*=\s*`[\s\S]*\$\{task\.name\}/.test(popupJs), '单站点卡片渲染不应通过 innerHTML 拼接站点名称');
 assert(!/body\.innerHTML\s*=\s*`[\s\S]*\$\{groupTitle\}/.test(popupJs), '编组卡片渲染不应通过 innerHTML 拼接编组名称');
 assert(!/body\.innerHTML\s*=\s*`[\s\S]*\$\{tasks\.map/.test(popupJs), '编组卡片渲染不应通过 innerHTML 拼接任务列表');

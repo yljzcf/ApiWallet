@@ -1903,7 +1903,7 @@ menuToggleBtn?.addEventListener('click', () => {
   setMenuOpen(!isMenuOpen);
 });
 addSiteBtn?.addEventListener('click', () => {
-  chrome.tabs.create({ url: 'add-site.html' });
+  chrome.tabs.create({ url: chrome.runtime.getURL('src/pages/add-site.html') });
 });
 autoSortToggleEl?.addEventListener('click', () => {
   handleAutoSortToggle();
