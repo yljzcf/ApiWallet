@@ -1,0 +1,13 @@
+site-config.archive.json
+site-config.private.json
+.env
+.env.*
+*.pem
+*.key
+node_modules/
+dist/
+build/
+coverage/
+.DS_Store
+Thumbs.db
+CUsers本地.claudeclaude-notify-signalsstop

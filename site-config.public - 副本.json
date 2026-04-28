@@ -1,0 +1,19 @@
+[
+  { "id": "sparkcode-api", "name": "Spark套餐", "url": "https://sparkcode.top/api/my_plans/", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.current_plan.quota", "divideBy": 500000 },
+  { "id": "sparkcode-api2", "name": "Spark钱包", "url": "https://sparkcode.top/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "chintao-api", "name": "Chintao", "url": "https://chintao.cn/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "ikun-api", "name": "Ikun", "url": "https://api.team-invite.cn/api/v1/auth/me", "type": "json", "headers": { "authorization": "Bearer YOUR_AUTHORIZATION" }, "fieldPath": "data.balance" },
+  { "id": "duck-api", "name": "Duck", "url": "https://www.duckcoding.ai/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "rightcode-api", "name": "Rightcode", "url": "https://www.right.codes/auth/me", "type": "json", "headers": { "authorization": "Bearer YOUR_AUTHORIZATION" }, "fieldPath": "balance" },
+  { "id": "dawcode-api", "name": "Dawcode", "url": "https://dawclaudecode.com/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "yunwu-api", "name": "云雾", "url": "https://yunwu.ai/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "micu-api", "name": "米醋", "url": "https://www.openclaudecode.cn/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "xcode-api", "name": "Xcode", "url": "https://xcode.best/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "ekan8-api", "name": "Ekan8", "url": "https://api.ekan8.com/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "terminal-api", "name": "Terminal", "url": "https://terminal.pub/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "packy-api", "name": "Packy", "url": "https://www.packyapi.com/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "bolatu-api", "name": "柏拉图", "url": "https://api.bltcy.ai/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "发现-api", "name": "发现", "url": "https://www.findcg.com/api/v1/auth/me", "type": "json", "headers": { "authorization": "Bearer YOUR_AUTHORIZATION" }, "fieldPath": "data.balance" },
+  { "id": "yiyuan-api", "name": "一元", "url": "https://timesniper.club/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 },
+  { "id": "bytecat-api", "name": "Bytecat", "url": "https://www.bytecatcode.org/api/user/self", "type": "json", "headers": { "new-api-user": "YOUR_NEW_API_USER" }, "fieldPath": "data.quota", "divideBy": 500000 }
+]

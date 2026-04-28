@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>站点管理</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-deep: #041315;
+      --bg-mid: #0a2225;
+      --bg-glow: rgba(43, 176, 153, 0.16);
+      --panel: rgba(11, 24, 27, 0.82);
+      --panel-strong: rgba(16, 32, 36, 0.92);
+      --panel-soft: rgba(255, 255, 255, 0.04);
+      --panel-soft-hover: rgba(154, 240, 222, 0.08);
+      --panel-border: rgba(132, 218, 203, 0.14);
+      --text-primary: #edf8f6;
+      --text-secondary: rgba(223, 242, 238, 0.66);
+      --accent: #78e0ca;
+      --accent-strong: #9af0de;
+      --accent-soft: rgba(120, 224, 202, 0.18);
+      --danger: rgba(255, 126, 154, 0.22);
+      --danger-border: rgba(255, 126, 154, 0.32);
+      --success: rgba(120, 224, 202, 0.18);
+      --success-border: rgba(120, 224, 202, 0.3);
+      --input-fill: rgba(255, 255, 255, 0.04);
+      --shadow-soft: 0 18px 42px rgba(0, 0, 0, 0.28);
+      --shadow-strong: 0 28px 56px rgba(0, 0, 0, 0.34);
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg-deep: #f6fbff;
+      --bg-mid: #ebf6fb;
+      --bg-glow: rgba(90, 182, 214, 0.16);
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: rgba(245, 252, 255, 0.96);
+      --panel-soft: rgba(21, 74, 88, 0.06);
+      --panel-soft-hover: rgba(47, 159, 191, 0.12);
+      --panel-border: rgba(77, 138, 160, 0.18);
+      --text-primary: #16333a;
+      --text-secondary: rgba(22, 51, 58, 0.68);
+      --accent: #2f9fbf;
+      --accent-strong: #147ea2;
+      --accent-soft: rgba(47, 159, 191, 0.14);
+      --danger: rgba(230, 100, 130, 0.1);
+      --danger-border: rgba(230, 100, 130, 0.24);
+      --success: rgba(47, 159, 191, 0.12);
+      --success-border: rgba(47, 159, 191, 0.24);
+      --input-fill: rgba(21, 74, 88, 0.05);
+      --shadow-soft: 0 18px 42px rgba(64, 102, 122, 0.16);
+      --shadow-strong: 0 28px 56px rgba(64, 102, 122, 0.2);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      font-family: "Segoe UI Variable Display", "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      color: var(--text-primary);
+      background:
+        radial-gradient(circle at top right, rgba(120, 224, 202, 0.18), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(61, 114, 255, 0.12), transparent 24%),
+        linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
+    }
+
+    .page {
+      width: min(100%, 1120px);
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel,
+    .hero,
+    .mode-nav {
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .hero {
+      padding: 24px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--accent-strong);
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+    }
+
+    .hero-copy {
+      margin: 0;
+      max-width: 760px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+
+    .site-manager-layout {
+      display: grid;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .mode-nav {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      position: sticky;
+      top: 24px;
+    }
+
+    .mode-nav-title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .mode-switch-btn,
+    button,
+    .link-btn,
+    .site-list-item {
+      border: 1px solid var(--panel-border);
+      background: var(--panel-soft);
+      color: var(--text-primary);
+      font: inherit;
+      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .mode-switch-btn,
+    button,
+    .link-btn {
+      height: 40px;
+      border-radius: 14px;
+      padding: 0 15px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mode-switch-btn {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .mode-switch-btn.is-selected,
+    .ghost-btn.is-selected,
+    .site-list-item.is-selected,
+    .primary-btn {
+      background: var(--accent-soft);
+      border-color: rgba(154, 240, 222, 0.28);
+    }
+
+    button:hover,
+    .link-btn:hover,
+    .mode-switch-btn:hover,
+    .site-list-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(154, 240, 222, 0.3);
+      background: var(--panel-soft-hover);
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      background: var(--input-fill);
+      color: var(--text-primary);
+      padding: 12px 13px;
+      font: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    textarea { min-height: 96px; resize: vertical; }
+
+    input:focus-visible,
+    textarea:focus-visible,
+    button:focus-visible,
+    a:focus-visible {
+      outline: 2px solid rgba(154, 240, 222, 0.34);
+      outline-offset: 2px;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: rgba(154, 240, 222, 0.32);
+      box-shadow: 0 0 0 3px rgba(154, 240, 222, 0.08);
+    }
+
+    .content-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 20px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .section-heading {
+      display: grid;
+      gap: 6px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .section-copy {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .step-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .step-pill {
+      min-height: 52px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-soft);
+      display: grid;
+      gap: 4px;
+      transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+    }
+
+    .step-pill.is-active {
+      border-color: rgba(154, 240, 222, 0.28);
+      background: var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    .step-pill-index {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--text-secondary);
+    }
+
+    .step-pill-title {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .form-grid,
+    .support-grid,
+    .auth-grid,
+    .metric-grid,
+    .edit-layout,
+    .edit-auth-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .create-form-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .edit-auth-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .auth-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .support-grid,
+    .edit-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .metric-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .edit-layout {
+      grid-template-columns: 280px minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .field,
+    .field-stack,
+    .metric-card,
+    .site-list-panel,
+    .site-edit-panel {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field-stack {
+      grid-column: 1 / -1;
+    }
+
+    .label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: 0.03em;
+    }
+
+    .message {
+      min-height: 44px;
+      padding: 11px 13px;
+      border-radius: 14px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-soft);
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+    }
+
+    .message.is-error {
+      border-color: var(--danger-border);
+      background: var(--danger);
+      color: var(--text-primary);
+    }
+
+    .message.is-success {
+      border-color: var(--success-border);
+      background: var(--success);
+      color: var(--text-primary);
+    }
+
+    .metric-card,
+    .site-list-panel,
+    .site-edit-panel {
+      min-height: 110px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-soft);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 36px);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.06em;
+    }
+
+    .metric-note,
+    .footer-note,
+    .site-list-empty,
+    .site-list-item-meta,
+    .selected-site-badge {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .toolbar-actions,
+    .toolbar-links {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .site-list-panel,
+    .site-edit-panel {
+      align-content: start;
+    }
+
+    .site-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .site-list-item {
+      width: 100%;
+      min-height: 62px;
+      border-radius: 14px;
+      padding: 12px 13px;
+      text-align: left;
+      display: grid;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .site-list-item-name {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .selected-site-badge {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--panel-border);
+      background: var(--input-fill);
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .danger-btn {
+      border-color: var(--danger-border);
+    }
+
+    .manager-shell {
+      display: grid;
+      gap: 18px;
+    }
+
+    .board-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .config-board {
+      min-height: 260px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px dashed var(--panel-border);
+      background: var(--panel-soft);
+    }
+
+    .config-board-empty {
+      min-height: 180px;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      border-radius: 16px;
+      background: var(--input-fill);
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .board-card-menu {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-soft);
+    }
+
+    .editor-panels {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .group-name-panel {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-soft);
+    }
+
+    .site-config-panel {
+      display: grid;
+      gap: 18px;
+    }
+
+    .site-config-card {
+      display: grid;
+      gap: 18px;
+      padding: 10px;
+    }
+
+    .site-config-card__topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .site-config-card__header {
+      width: min(100%, 460px);
+      margin: 0 auto;
+      display: grid;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .site-name-field {
+      text-align: left;
+    }
+
+    .site-config-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .raw-value-row {
+      display: grid;
+      grid-template-columns: minmax(160px, auto) minmax(0, 1fr) minmax(130px, auto);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .raw-value-card,
+    .calculated-value-card {
+      min-height: 76px;
+    }
+
+    .advanced-settings {
+      display: grid;
+      gap: 12px;
+      padding-top: 2px;
+      border-top: 1px solid var(--panel-border);
+    }
+
+    .advanced-settings-toggle {
+      width: 100%;
+      justify-content: center;
+      border-style: dashed;
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .advanced-settings-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .formula-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+      gap: 12px;
+      align-items: end;
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 920px) {
+      .site-manager-layout,
+      .edit-layout,
+      .editor-panels {
+        grid-template-columns: 1fr;
+      }
+
+      .mode-nav {
+        position: static;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 14px; }
+
+      .site-config-grid,
+      .raw-value-row,
+      .formula-row,
+      .create-form-grid,
+      .form-grid,
+      .auth-grid,
+      .metric-grid,
+      .step-strip,
+      .edit-auth-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">Site Manager</p>
+      <h1>站点管理</h1>
+      <p class="hero-copy">配置看板卡片、分组与站点信息；导入或编辑配置后，点击保存即可同步到扩展面板。</p>
+    </section>
+
+    <section id="siteManagerLayout" class="site-manager-layout">
+      <div class="manager-shell">
+        <section id="homePanel" class="panel">
+          <div class="board-toolbar">
+            <div class="section-heading">
+              <h2 class="section-title">配置看板</h2>
+              <p class="section-copy">当前所有卡片和编组会显示在这里。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button id="addSiteConfigBtn" class="primary-btn" type="button">新增站点</button>
+              <button id="importFileBtn" class="ghost-btn" type="button">导入配置</button>
+              <input id="importFileInput" type="file" accept=".json" hidden>
+              <button id="exportSitesBtn" class="ghost-btn" type="button">导出配置</button>
+            </div>
+          </div>
+
+          <div id="importMessage" class="message" role="alert" hidden></div>
+
+          <div id="configBoard" class="config-board" aria-label="当前卡片看板">
+            <div id="configBoardEmpty" class="config-board-empty">当前没有站点卡片。可以导入配置，或点击“新增站点”创建。</div>
+          </div>
+        </section>
+
+        <section id="siteConfigPanel" class="panel site-config-panel" hidden>
+          <div class="site-config-card">
+            <div class="site-config-card__topbar">
+              <button id="backHomeBtn" class="ghost-btn" type="button">← 返回面板</button>
+              <button id="deleteSiteBtn" class="danger-btn" type="button">删除站点</button>
+            </div>
+
+            <div class="site-config-card__header">
+              <label class="field site-name-field">
+                <span class="label">站点名</span>
+                <input id="siteNameInput" type="text" placeholder="例如：自定义站点" autocomplete="off">
+              </label>
+              <p id="selectedSiteBadge" class="selected-site-badge">当前未选中站点</p>
+            </div>
+
+            <div class="form-grid site-config-grid">
+              <label class="field">
+                <span class="label">接口地址</span>
+                <input id="siteUrlInput" type="url" placeholder="https://example.com/api/user/self" autocomplete="off">
+              </label>
+              <label class="field">
+                <span class="label">监控字段</span>
+                <input id="siteFieldPathInput" type="text" placeholder="例如：data.balance / data.quota" autocomplete="off">
+              </label>
+              <label class="field">
+                <span class="label">鉴权字段</span>
+                <select id="authHeaderSelect">
+                  <option value="authorization">authorization</option>
+                  <option value="token">token</option>
+                  <option value="new-api-user">new-api-user</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="label">鉴权字段值</span>
+                <input id="authHeaderValueInput" type="text" placeholder="Bearer ... / token 值 / 用户标识" autocomplete="off">
+              </label>
+            </div>
+
+            <div id="siteErrorMessage" class="message" role="alert" hidden></div>
+
+            <div id="rawValueSection" class="raw-value-row">
+              <button id="fetchRawValueBtn" class="ghost-btn" type="button">访问接口，获取原值</button>
+              <article class="metric-card raw-value-card">
+                <span class="metric-label">原值展示</span>
+                <p id="rawValueText" class="metric-value">--</p>
+              </article>
+              <button id="finishSiteConfigBtn" class="primary-btn" type="button">完成配置</button>
+            </div>
+
+            <section class="advanced-settings">
+              <button id="advancedSettingsToggle" class="advanced-settings-toggle" type="button" aria-expanded="false">+ 点击展开高级设置</button>
+              <div id="advancedSettingsPanel" class="advanced-settings-panel" hidden>
+                <div class="formula-row">
+                  <label class="field formula-field">
+                    <span class="label">留空或输入公式</span>
+                    <input id="calculationExpressionInput" type="text" placeholder="例如：X/500000" autocomplete="off">
+                  </label>
+                  <button id="testCalculationBtn" class="ghost-btn" type="button">测试计算</button>
+                </div>
+                <article class="metric-card calculated-value-card">
+                  <span class="metric-label">计算结果展示</span>
+                  <p id="calculatedValueText" class="metric-value">--</p>
+                </article>
+              </div>
+            </section>
+
+            <p id="completionHint" class="footer-note">先访问接口获取原值；公式非空时，需要测试计算通过后才能完成配置。</p>
+          </div>
+        </section>
+
+        <section id="groupEditPanel" class="group-name-panel" hidden>
+          <div class="section-heading">
+            <h2 class="section-title">编组配置</h2>
+            <p class="section-copy">修改编组名称和组内卡片显示名称。</p>
+          </div>
+          <label class="field">
+            <span class="label">组名</span>
+            <input id="groupNameInput" type="text" placeholder="例如：工作组" autocomplete="off">
+          </label>
+          <div id="groupTaskNameList" class="site-list"></div>
+          <button id="finishGroupEditBtn" class="primary-btn" type="button">完成</button>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="site-config-shared.js"></script>
+  <script src="add-site.js"></script>
+</body>
+</html>
