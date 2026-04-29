@@ -42,6 +42,8 @@ function createDomRefs(doc = document) {
     authHeaderValueInput: doc.getElementById('authHeaderValueInput'),
     fetchRawValueBtn: doc.getElementById('fetchRawValueBtn'),
     finishSiteConfigBtn: doc.getElementById('finishSiteConfigBtn'),
+    siteActionMenuToggle: doc.getElementById('siteActionMenuToggle'),
+    siteActionMenu: doc.getElementById('siteActionMenu'),
     advancedSettingsToggle: doc.getElementById('advancedSettingsToggle'),
     advancedSettingsPanel: doc.getElementById('advancedSettingsPanel'),
     testCalculationBtn: doc.getElementById('testCalculationBtn'),
@@ -840,6 +842,16 @@ function createPageApp(options = {}) {
     hideGroupPopover();
   }
 
+  function handlePageClickForSiteActionMenu(event) {
+    if (!refs.siteActionMenu || refs.siteActionMenu.hidden) {
+      return;
+    }
+    if (refs.siteActionMenu.contains(event.target) || refs.siteActionMenuToggle?.contains?.(event.target)) {
+      return;
+    }
+    closeSiteActionMenu();
+  }
+
   function showView(nextView) {
     currentView = nextView;
     if (refs.homePanel) refs.homePanel.hidden = nextView !== 'home';
@@ -847,6 +859,9 @@ function createPageApp(options = {}) {
     if (refs.groupEditPanel) refs.groupEditPanel.hidden = nextView !== 'groupEdit';
     if (nextView !== 'home') {
       hideGroupPopover();
+    }
+    if (!nextView.startsWith('siteForm')) {
+      closeSiteActionMenu();
     }
   }
 
@@ -1016,6 +1031,26 @@ function createPageApp(options = {}) {
     if (refs.calculatedValueText) refs.calculatedValueText.textContent = '--';
   }
 
+  function closeSiteActionMenu() {
+    if (refs.siteActionMenu) refs.siteActionMenu.hidden = true;
+    refs.siteActionMenuToggle?.setAttribute('aria-expanded', 'false');
+  }
+
+  function setSiteActionMenuAvailable(available) {
+    if (refs.siteActionMenuToggle) refs.siteActionMenuToggle.hidden = !available;
+    if (!available) closeSiteActionMenu();
+    if (refs.deleteSiteBtn) refs.deleteSiteBtn.hidden = !available;
+  }
+
+  function toggleSiteActionMenu() {
+    if (!refs.siteActionMenu || refs.siteActionMenuToggle?.hidden) {
+      return;
+    }
+    const expanded = refs.siteActionMenu.hidden !== false;
+    refs.siteActionMenu.hidden = !expanded;
+    refs.siteActionMenuToggle?.setAttribute('aria-expanded', String(expanded));
+  }
+
   function setAdvancedSettingsExpanded(expanded) {
     if (refs.advancedSettingsPanel) refs.advancedSettingsPanel.hidden = !expanded;
     refs.advancedSettingsToggle?.setAttribute('aria-expanded', String(expanded));
@@ -1027,7 +1062,7 @@ function createPageApp(options = {}) {
   function fillEditForm(site) {
     selectedSiteId = site.id;
     if (refs.selectedSiteBadge) {
-      refs.selectedSiteBadge.textContent = site.id ? `当前编辑：${site.name || '未命名站点'}` : '正在新增站点';
+      refs.selectedSiteBadge.textContent = '';
       refs.selectedSiteBadge.dataset.isCustom = site.isCustom ? 'true' : 'false';
     }
     if (refs.siteNameInput) refs.siteNameInput.value = site.name || '';
@@ -1038,7 +1073,7 @@ function createPageApp(options = {}) {
     if (refs.editSiteFieldPathInput) refs.editSiteFieldPathInput.value = site.fieldPath || '';
     if (refs.calculationExpressionInput) refs.calculationExpressionInput.value = site.calculationExpression || '';
     fillAuthHeaderInputs(site.headers);
-    if (refs.deleteSiteBtn) refs.deleteSiteBtn.hidden = !site.id;
+    setSiteActionMenuAvailable(Boolean(site.id));
     resetUnifiedPreview();
     resetCalculationState();
     setAdvancedSettingsExpanded(false);
@@ -1428,6 +1463,7 @@ function createPageApp(options = {}) {
   }
 
   async function deleteCurrentSite() {
+    closeSiteActionMenu();
     if (!selectedSiteId) {
       throw createTaskError('请先选择需要删除的站点。', { kind: 'validation' });
     }
@@ -1436,7 +1472,7 @@ function createPageApp(options = {}) {
     await boardEditor.saveDraftToBoard();
     selectedSiteId = null;
     if (refs.selectedSiteBadge) {
-      refs.selectedSiteBadge.textContent = '当前未选中站点';
+      refs.selectedSiteBadge.textContent = '';
       refs.selectedSiteBadge.dataset.isCustom = 'false';
     }
     ['editSiteNameInput', 'editSiteUrlInput', 'editSiteFieldPathInput', 'editAuthorizationInput', 'editTokenInput', 'editNewApiUserInput'].forEach((key) => {
@@ -1450,6 +1486,7 @@ function createPageApp(options = {}) {
   }
 
   function returnHomeWithoutSaving() {
+    closeSiteActionMenu();
     selectedSiteId = null;
     selectedGroupId = null;
     setEditMessage('修改已取消。');
@@ -1585,7 +1622,12 @@ function createPageApp(options = {}) {
         testUnifiedCalculation().catch((error) => setMessage(formatWizardErrorMessage(error), 'error'));
       });
       refs.finishSiteConfigBtn?.addEventListener('click', () => {
+        closeSiteActionMenu();
         finishUnifiedSiteConfig().catch((error) => setMessage(formatWizardErrorMessage(error), 'error'));
+      });
+      refs.siteActionMenuToggle?.addEventListener('click', (event) => {
+        event.stopPropagation?.();
+        toggleSiteActionMenu();
       });
       refs.advancedSettingsToggle?.addEventListener('click', () => {
         const nextExpanded = refs.advancedSettingsPanel?.hidden !== false;
@@ -1637,11 +1679,12 @@ function createPageApp(options = {}) {
           setEditMessage(formatWizardErrorMessage(error), 'error');
         });
       });
-      refs.deleteSiteBtn?.addEventListener('click', () => (
-        deleteCurrentSite().catch((error) => {
+      refs.deleteSiteBtn?.addEventListener('click', () => {
+        closeSiteActionMenu();
+        return deleteCurrentSite().catch((error) => {
           setMessage(formatWizardErrorMessage(error), 'error');
-        })
-      ));
+        });
+      });
       refs.backHomeBtn?.addEventListener('click', () => (
         returnHomeWithoutSaving().catch((error) => {
           setMessage(formatWizardErrorMessage(error), 'error');
@@ -1666,6 +1709,7 @@ function createPageApp(options = {}) {
         });
       });
       pageDocument.addEventListener('click', handlePageClickForGroupPopover);
+      pageDocument.addEventListener('click', handlePageClickForSiteActionMenu);
       updateFormState(controller.getErrorOrAuthChallengeState());
       setMode(DEFAULT_MODE);
       showView('home');

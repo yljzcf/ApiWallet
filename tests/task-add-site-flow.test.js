@@ -193,6 +193,8 @@ function createDocumentStub() {
     'authHeaderValueInput',
     'fetchRawValueBtn',
     'finishSiteConfigBtn',
+    'siteActionMenuToggle',
+    'siteActionMenu',
     'advancedSettingsToggle',
     'advancedSettingsPanel',
     'testCalculationBtn',
@@ -249,6 +251,7 @@ function createDocumentStub() {
   elements.get('groupPopover').appendChild(elements.get('groupPopoverNameInput'));
   elements.get('groupPopover').appendChild(elements.get('saveGroupNameBtn'));
   elements.get('groupPopover').appendChild(elements.get('groupPopoverTaskList'));
+  elements.get('siteActionMenu').appendChild(elements.get('deleteSiteBtn'));
 
   return {
     elements,
@@ -265,17 +268,16 @@ function createDocumentStub() {
     querySelector() { return null; },
     querySelectorAll(selector) { return queryMap.get(selector) || []; },
     addEventListener(type, listener) {
-      documentListeners.set(type, listener);
+      const listeners = documentListeners.get(type) || [];
+      documentListeners.set(type, [...listeners, listener]);
     },
-    removeEventListener(type) {
-      documentListeners.delete(type);
+    removeEventListener(type, listener) {
+      const listeners = documentListeners.get(type) || [];
+      documentListeners.set(type, listeners.filter((item) => item !== listener));
     },
     dispatch(type, event = {}) {
-      const listener = documentListeners.get(type);
-      if (listener) {
-        return listener({ target: this, currentTarget: this, stopPropagation() {}, preventDefault() {}, ...event });
-      }
-      return undefined;
+      const listeners = documentListeners.get(type) || [];
+      return listeners.map((listener) => listener({ target: this, currentTarget: this, stopPropagation() {}, preventDefault() {}, ...event }));
     }
   };
 }

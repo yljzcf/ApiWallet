@@ -566,28 +566,103 @@
     }
 
     .site-config-card {
+      --site-control-height: 44px;
+      --site-action-width: 150px;
+      width: min(100%, 760px);
+      margin: 0 auto;
       display: grid;
       gap: 18px;
-      padding: 10px;
+      padding: 4px;
+    }
+
+    #siteConfigPanel button,
+    #siteConfigPanel input,
+    #siteConfigPanel select {
+      height: var(--site-control-height);
+      box-sizing: border-box;
+    }
+
+    #siteConfigPanel input,
+    #siteConfigPanel select {
+      padding-top: 0;
+      padding-bottom: 0;
     }
 
     .site-config-card__topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: var(--site-action-width) minmax(0, 1fr) var(--site-action-width);
+      gap: 14px;
+      align-items: end;
     }
 
-    .site-config-card__header {
-      width: min(100%, 460px);
-      margin: 0 auto;
+    #backHomeBtn,
+    #fetchRawValueBtn,
+    #testCalculationBtn {
+      width: var(--site-action-width);
+    }
+
+    .site-config-actions {
+      position: relative;
+      width: var(--site-action-width);
       display: grid;
-      gap: 10px;
-      text-align: center;
+      grid-template-columns: minmax(0, 1fr) 48px;
+      gap: 0;
+      align-items: stretch;
+    }
+
+    #finishSiteConfigBtn,
+    #siteActionMenuToggle {
+      background: var(--accent-soft);
+      border-color: rgba(154, 240, 222, 0.28);
+      color: var(--text-primary);
+    }
+
+    #finishSiteConfigBtn {
+      width: 100%;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      border-right: 0;
+    }
+
+    .site-action-menu-toggle {
+      width: 100%;
+      padding: 0;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      border-left-color: rgba(255, 255, 255, 0.24);
+    }
+
+    .site-action-menu {
+      position: absolute;
+      z-index: 8;
+      right: 0;
+      top: calc(100% + 8px);
+      width: 160px;
+      display: grid;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 16px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-strong);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .site-action-menu button {
+      width: 100%;
+      justify-content: flex-start;
     }
 
     .site-name-field {
       text-align: left;
+    }
+
+    .selected-site-badge {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
     }
 
     .site-config-grid {
@@ -596,14 +671,33 @@
 
     .raw-value-row {
       display: grid;
-      grid-template-columns: minmax(160px, auto) minmax(0, 1fr) minmax(130px, auto);
+      grid-template-columns: minmax(0, 1fr) var(--site-action-width);
       gap: 12px;
       align-items: stretch;
     }
 
     .raw-value-card,
     .calculated-value-card {
-      min-height: 76px;
+      min-height: var(--site-control-height);
+      height: var(--site-control-height);
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      padding: 0 12px;
+      box-sizing: border-box;
+    }
+
+    .raw-value-card .metric-label,
+    .calculated-value-card .metric-label,
+    .raw-value-card .metric-value,
+    .calculated-value-card .metric-value {
+      margin: 0;
+    }
+
+    .raw-value-card .metric-value,
+    .calculated-value-card .metric-value {
+      font-size: clamp(24px, 4vw, 30px);
     }
 
     .advanced-settings {
@@ -628,7 +722,7 @@
 
     .formula-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+      grid-template-columns: minmax(0, 1fr) var(--site-action-width);
       gap: 12px;
       align-items: end;
     }
@@ -662,6 +756,7 @@
     @media (max-width: 760px) {
       body { padding: 14px; }
 
+      .site-config-card__topbar,
       .site-config-grid,
       .raw-value-row,
       .formula-row,
@@ -672,6 +767,13 @@
       .step-strip,
       .edit-auth-grid {
         grid-template-columns: 1fr;
+      }
+
+      #backHomeBtn,
+      .site-config-actions,
+      #fetchRawValueBtn,
+      #testCalculationBtn {
+        width: 100%;
       }
     }
   </style>
@@ -723,16 +825,19 @@
           <div class="site-config-card">
             <div class="site-config-card__topbar">
               <button id="backHomeBtn" class="ghost-btn" type="button">← 返回面板</button>
-              <button id="deleteSiteBtn" class="danger-btn" type="button">删除站点</button>
+              <label class="field site-name-field">
+                <input id="siteNameInput" type="text" placeholder="请输入站点名" autocomplete="off">
+              </label>
+              <div class="site-config-actions">
+                <button id="finishSiteConfigBtn" class="primary-btn" type="button">完成配置</button>
+                <button id="siteActionMenuToggle" class="ghost-btn site-action-menu-toggle" type="button" aria-label="站点操作" aria-expanded="false">⌄</button>
+                <div id="siteActionMenu" class="site-action-menu" hidden>
+                  <button id="deleteSiteBtn" class="danger-btn" type="button">删除站点</button>
+                </div>
+              </div>
             </div>
 
-            <div class="site-config-card__header">
-              <label class="field site-name-field">
-                <span class="label">站点名</span>
-                <input id="siteNameInput" type="text" placeholder="例如：自定义站点" autocomplete="off">
-              </label>
-              <p id="selectedSiteBadge" class="selected-site-badge">当前未选中站点</p>
-            </div>
+            <p id="selectedSiteBadge" class="selected-site-badge">当前未选中站点</p>
 
             <div class="form-grid site-config-grid">
               <label class="field">
@@ -760,12 +865,11 @@
             <div id="siteErrorMessage" class="message" role="alert" hidden></div>
 
             <div id="rawValueSection" class="raw-value-row">
-              <button id="fetchRawValueBtn" class="ghost-btn" type="button">访问接口，获取原值</button>
               <article class="metric-card raw-value-card">
                 <span class="metric-label">原值展示</span>
                 <p id="rawValueText" class="metric-value">--</p>
               </article>
-              <button id="finishSiteConfigBtn" class="primary-btn" type="button">完成配置</button>
+              <button id="fetchRawValueBtn" class="ghost-btn" type="button">访问接口</button>
             </div>
 
             <section class="advanced-settings">
