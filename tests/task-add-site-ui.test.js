@@ -66,7 +66,7 @@ assert(/\.site-config-actions\.is-single-action\s*\{[\s\S]*grid-template-columns
 assert(/\.site-config-actions\.is-single-action\s+#finishSiteConfigBtn\s*\{[\s\S]*border-top-right-radius:\s*14px;[\s\S]*border-bottom-right-radius:\s*14px;[\s\S]*border-right:\s*1px\s+solid\s+rgba\(154,\s*240,\s*222,\s*0\.28\);/.test(html), '新增站点页完成配置按钮应恢复完整右侧圆角和右边框');
 assert(/#backHomeBtn,\s*#fetchRawValueBtn,\s*#testCalculationBtn\s*\{[\s\S]*width:\s*var\(--site-action-width\);/.test(html), '返回面板、访问接口和测试计算按钮应使用同一宽度');
 assert(/#siteConfigPanel\s+button,[\s\S]*#siteConfigPanel\s+input,[\s\S]*#siteConfigPanel\s+select\s*\{[\s\S]*height:\s*var\(--site-control-height\);[\s\S]*box-sizing:\s*border-box;/.test(html), '单站点配置页按钮、输入框和下拉框应统一高度');
-assert(/#finishSiteConfigBtn,[\s\S]*#siteActionMenuToggle\s*\{[\s\S]*background:\s*var\(--accent-soft\);[\s\S]*border-color:\s*rgba\(154,\s*240,\s*222,\s*0\.28\);/.test(html), '完成配置按钮和下拉按钮应使用相同背景与边框色');
+assert(/#finishSiteConfigBtn,[\s\S]*#siteActionMenuToggle\s*\{[\s\S]*background:\s*var\(--accent-soft\);[\s\S]*border-color:\s*rgba\(142,\s*232,\s*178,\s*0\.28\);/.test(html), '完成配置按钮和下拉按钮应使用相同背景与边框色');
 assert(/#finishSiteConfigBtn\s*\{[\s\S]*border-top-right-radius:\s*0;[\s\S]*border-bottom-right-radius:\s*0;/.test(html), '完成配置按钮右侧应与下拉按钮合并');
 assert(/\.site-action-menu-toggle\s*\{[\s\S]*border-top-left-radius:\s*0;[\s\S]*border-bottom-left-radius:\s*0;/.test(html), '下拉按钮左侧应与完成配置按钮合并');
 assert(/id="siteConfigActions"\s+class="[^"]*site-config-actions/.test(siteFormHtml), '单站点配置页应提供可切换状态的完成配置动作区');

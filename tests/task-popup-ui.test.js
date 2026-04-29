@@ -4,6 +4,15 @@ const path = require('path');
 const projectRoot = path.resolve(__dirname, '..');
 
 const html = fs.readFileSync(path.join(projectRoot, 'src/pages/popup.html'), 'utf8');
+const addSiteHtml = fs.readFileSync(path.join(projectRoot, 'src/pages/add-site.html'), 'utf8');
+
+for (const [pageName, pageHtml] of [['popup', html], ['add-site', addSiteHtml]]) {
+  assert(pageHtml.includes('--accent: #4fd18b;'), `${pageName} 暗色主题应使用墨绿强调色`);
+  assert(pageHtml.includes('--accent: #65b82f;'), `${pageName} 亮色主题应使用草绿强调色`);
+  assert(!pageHtml.includes('rgba(61, 114, 255'), `${pageName} 背景不应保留蓝色光晕`);
+  assert(!pageHtml.includes('#2f9fbf'), `${pageName} 亮色主题不应保留蓝色强调色`);
+  assert(!pageHtml.includes('#147ea2'), `${pageName} 亮色主题不应保留蓝色强强调色`);
+}
 
 assert(/<button id="addSiteBtn"[\s\S]*?>\s*站点\s*<\/button>/.test(html), 'popup 应提供“站点”按钮文案');
 assert(/<button id="menuToggleBtn"[\s\S]*?>\s*配置\s*<\/button>/.test(html), 'popup 应提供“配置”按钮文案');
