@@ -210,9 +210,15 @@
     });
   }
 
-  function getNestedValue(source, fieldPath) {
+  function parseFieldPath(fieldPath) {
     return String(fieldPath)
+      .replace(/\[(\d+)\]/g, '.$1')
       .split('.')
+      .filter((key) => key !== '');
+  }
+
+  function getNestedValue(source, fieldPath) {
+    return parseFieldPath(fieldPath)
       .reduce((current, key) => (current === null || current === undefined ? undefined : current[key]), source);
   }
 

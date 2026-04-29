@@ -46,6 +46,29 @@ assert.strictEqual(shared.applyCalculationExpression('2500000.00', 'X/500000'), 
 assert.strictEqual(shared.applyCalculationExpression('10.00', '(X + 10) / 2'), '10.00', '应支持括号和加减乘除优先级');
 assert.strictEqual(shared.applyCalculationExpression('10.00', '-X + 15'), '5.00', '应支持一元负号');
 
+const subscriptionPayload = {
+  data: {
+    all_subscriptions: [
+      { subscription: { amount_used: 123.45 } }
+    ]
+  }
+};
+assert.strictEqual(
+  shared.extractBalanceValue(subscriptionPayload, 'data.all_subscriptions[0].subscription.amount_used'),
+  '123.45',
+  '监控字段应支持 bracket 数组索引'
+);
+assert.strictEqual(
+  shared.extractBalanceValue(subscriptionPayload, 'data.all_subscriptions.0.subscription.amount_used'),
+  '123.45',
+  '监控字段应继续支持点路径数组索引'
+);
+assert.throws(
+  () => shared.extractBalanceValue(subscriptionPayload, 'data.all_subscriptions[9].subscription.amount_used'),
+  (error) => error && error.kind === 'missing-field' && error.fieldPath === 'data.all_subscriptions[9].subscription.amount_used',
+  'bracket 数组索引越界应按字段缺失处理'
+);
+
 [
   ['X + A', '未知变量应报公式错误'],
   ['Math.max(X, 1)', '函数调用应报公式错误'],
