@@ -79,6 +79,7 @@ const advancedHtml = advancedSectionMatch ? advancedSectionMatch[0] : '';
 assert(/\.raw-value-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+var\(--site-action-width\);/.test(html), '原值行右侧访问接口按钮应使用统一动作宽度');
 assert(/\.formula-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+var\(--site-action-width\);/.test(html), '公式行右侧测试计算按钮应使用统一动作宽度');
 assert(/\.raw-value-card,\s*\.calculated-value-card\s*\{[\s\S]*min-height:\s*var\(--site-control-height\);[\s\S]*height:\s*var\(--site-control-height\);[\s\S]*grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\);/.test(html), '原值和计算结果展示应使用统一高度的一行控件');
+assert(/\.raw-value-card\s+\.metric-value,\s*\.calculated-value-card\s+\.metric-value\s*\{[\s\S]*font-size:\s*clamp\(24px,\s*4vw,\s*30px\);/.test(html), '原值和计算结果展示值字号应限制为最小 24px、最大 30px');
 assert(!/\.raw-value-card,\s*\.calculated-value-card\s*\{[\s\S]*min-height:\s*76px;/.test(html), '原值和计算结果展示不应保留过高卡片');
 assert(/id="rawValueSection"[\s\S]*id="rawValueText"[\s\S]*id="fetchRawValueBtn"/.test(html), '原值行应同时包含原值展示和访问接口按钮');
 assert(/id="advancedSettingsToggle"[\s\S]*点击展开高级设置/.test(html), '高级配置应提供默认收起的展开入口');
