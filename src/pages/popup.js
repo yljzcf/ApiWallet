@@ -71,6 +71,7 @@ const addSiteBtn = document.getElementById('addSiteBtn');
 const menuToggleBtn = document.getElementById('menuToggleBtn');
 const heroMenuEl = document.getElementById('heroMenu');
 const autoSortToggleEl = document.getElementById('autoSortToggle');
+const autoRefreshToggleEl = document.getElementById('autoRefreshToggle');
 const layoutColumnsSelectEl = document.getElementById('layoutColumnsSelect');
 const colorModeToggleEl = document.getElementById('colorModeToggle');
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
@@ -83,7 +84,7 @@ const cardRefs = new Map();
 const taskToViewItemIdMap = new Map();
 const inFlightTaskIds = new Set();
 const viewItemTaskStateMap = new Map();
-const POPUP_STATE_KEYS = ['boardData', 'lastUpdateTime', 'autoSortEnabled', 'layoutColumns', 'manualOrder', 'groups', 'siteConfigs', 'colorMode'];
+const POPUP_STATE_KEYS = ['boardData', 'lastUpdateTime', 'autoSortEnabled', 'autoRefreshEnabled', 'layoutColumns', 'manualOrder', 'groups', 'siteConfigs', 'colorMode'];
 const LONG_PRESS_DELAY = 320;
 const GROUP_OVERLAP_THRESHOLD = 0.32;
 const REORDER_EDGE_RATIO = 0.35;
@@ -92,6 +93,7 @@ let lastSuccessfulSyncTime = '';
 let isBatchRefreshing = false;
 let currentViewItems = [];
 let autoSortEnabled = false;
+let autoRefreshEnabled = false;
 let colorMode = 'dark';
 let layoutColumns = 2;
 let groupsCache = [];
@@ -186,6 +188,10 @@ function normalizeColorMode(value) {
   return value === 'light' ? 'light' : 'dark';
 }
 
+function normalizeAutoRefreshEnabled(value) {
+  return Boolean(value);
+}
+
 function normalizeManualOrder(value) {
   if (!Array.isArray(value)) {
     return [];
@@ -248,6 +254,13 @@ function applyAutoSortEnabled(nextValue) {
   }
 }
 
+function applyAutoRefreshEnabled(nextValue) {
+  autoRefreshEnabled = normalizeAutoRefreshEnabled(nextValue);
+  if (autoRefreshToggleEl) {
+    autoRefreshToggleEl.setAttribute('aria-checked', String(autoRefreshEnabled));
+  }
+}
+
 function applyColorMode(nextValue) {
   colorMode = normalizeColorMode(nextValue);
   document.documentElement?.setAttribute('data-theme', colorMode);
@@ -272,6 +285,7 @@ async function loadPopupState() {
     boardData: storedState.boardData && typeof storedState.boardData === 'object' ? storedState.boardData : {},
     lastUpdateTime: typeof storedState.lastUpdateTime === 'string' ? storedState.lastUpdateTime : '',
     autoSortEnabled: Boolean(storedState.autoSortEnabled),
+    autoRefreshEnabled: normalizeAutoRefreshEnabled(storedState.autoRefreshEnabled),
     colorMode: normalizeColorMode(storedState.colorMode),
     layoutColumns: storedState.layoutColumns === 4 ? 2 : normalizeLayoutColumns(storedState.layoutColumns),
     manualOrder: normalizeManualOrder(storedState.manualOrder),
@@ -292,6 +306,10 @@ async function persistPopupState(partialState = {}) {
 
   if (Object.prototype.hasOwnProperty.call(partialState, 'autoSortEnabled')) {
     payload.autoSortEnabled = Boolean(partialState.autoSortEnabled);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(partialState, 'autoRefreshEnabled')) {
+    payload.autoRefreshEnabled = normalizeAutoRefreshEnabled(partialState.autoRefreshEnabled);
   }
 
   if (Object.prototype.hasOwnProperty.call(partialState, 'layoutColumns')) {
@@ -820,6 +838,7 @@ function removeSiteTask(taskId) {
 function persistInteractionState() {
   return persistPopupState({
     autoSortEnabled,
+    autoRefreshEnabled,
     layoutColumns,
     colorMode,
     manualOrder: manualOrderCache,
@@ -934,13 +953,13 @@ function triggerViewItemRefresh(item) {
   }
 
   if (item.type === 'single') {
-    fetchSingleData(item.taskId);
+    fetchSingleData(item.taskId).catch(console.error);
     return;
   }
 
   if (item.type === 'group') {
     item.taskIds.forEach((taskId) => {
-      fetchSingleData(taskId);
+      fetchSingleData(taskId).catch(console.error);
     });
   }
 }
@@ -1557,7 +1576,7 @@ function bindDragInteractions(item, refs) {
 
   const pointerCancelHandler = () => {
     if (dragState) {
-      finishDrag();
+      finishDrag().catch(console.error);
       return;
     }
     cancelLongPress();
@@ -1587,12 +1606,12 @@ function bindDragInteractions(item, refs) {
     }
 
     if (item.type === 'single') {
-      fetchSingleData(item.taskId);
+      fetchSingleData(item.taskId).catch(console.error);
       return;
     }
 
     item.taskIds.forEach((taskId) => {
-      fetchSingleData(taskId);
+      fetchSingleData(taskId).catch(console.error);
     });
   });
 }
@@ -1603,19 +1622,20 @@ function applyFetchErrorToCard(taskId, valueEl, error, fallbackValue) {
 }
 
 function updateUI(data) {
-  for (const [id, value] of Object.entries(data)) {
-    const refs = getCardElements(id);
-    const valueEl = refs?.values?.get(id);
-    if (!refs || !valueEl) continue;
+  getTaskList().forEach((task) => {
+    const refs = getCardElements(task.id);
+    const valueEl = refs?.values?.get(task.id);
+    if (!refs || !valueEl) return;
 
-    valueEl.innerText = value;
-    setCardState(id, 'success', '');
-  }
+    valueEl.innerText = getTaskValue(task.id);
+    setCardState(task.id, Object.prototype.hasOwnProperty.call(data, task.id) ? 'success' : 'idle');
+  });
 }
 
 function buildPersistedPopupState(overrides = {}) {
   return {
     autoSortEnabled,
+    autoRefreshEnabled,
     layoutColumns,
     colorMode,
     manualOrder: manualOrderCache,
@@ -1663,6 +1683,7 @@ async function init() {
   groupsCache = popupState.groups;
   manualOrderCache = popupState.manualOrder;
   applyAutoSortEnabled(popupState.autoSortEnabled);
+  applyAutoRefreshEnabled(popupState.autoRefreshEnabled);
   applyColorMode(popupState.colorMode);
   applyLayoutColumns(popupState.layoutColumns);
   rebuildBoard();
@@ -1865,6 +1886,7 @@ async function handleAutoSortToggle() {
   applyAutoSortEnabled(!autoSortEnabled);
   await persistPopupState({
     autoSortEnabled,
+    autoRefreshEnabled,
     layoutColumns,
     colorMode,
     manualOrder: manualOrderCache,
@@ -1882,6 +1904,7 @@ async function handleLayoutColumnsChange(event) {
   rebuildBoard();
   await persistPopupState({
     autoSortEnabled,
+    autoRefreshEnabled,
     layoutColumns,
     colorMode,
     manualOrder: manualOrderCache,
@@ -1897,8 +1920,15 @@ async function handleColorModeToggle() {
   await persistPopupState({ colorMode });
 }
 
+async function handleAutoRefreshToggle() {
+  applyAutoRefreshEnabled(!autoRefreshEnabled);
+  await persistPopupState({ autoRefreshEnabled });
+}
 
-refreshBtn.addEventListener('click', fetchAllData);
+
+refreshBtn.addEventListener('click', () => {
+  fetchAllData().catch(console.error);
+});
 menuToggleBtn?.addEventListener('click', () => {
   setMenuOpen(!isMenuOpen);
 });
@@ -1906,26 +1936,47 @@ addSiteBtn?.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('src/pages/add-site.html') });
 });
 autoSortToggleEl?.addEventListener('click', () => {
-  handleAutoSortToggle();
+  handleAutoSortToggle().catch(console.error);
+});
+autoRefreshToggleEl?.addEventListener('click', () => {
+  handleAutoRefreshToggle().catch(console.error);
 });
 colorModeToggleEl?.addEventListener('click', () => {
-  handleColorModeToggle();
+  handleColorModeToggle().catch(console.error);
 });
 layoutColumnsSelectEl?.addEventListener('change', (event) => {
-  handleLayoutColumnsChange(event);
+  handleLayoutColumnsChange(event).catch(console.error);
 });
 chrome.storage?.onChanged?.addListener((changes, areaName) => {
-  if (areaName !== 'local' || !changes || isBatchRefreshing) {
+  if (areaName !== 'local' || !changes) {
+    return;
+  }
+
+  if (changes.autoRefreshEnabled) {
+    applyAutoRefreshEnabled(changes.autoRefreshEnabled.newValue);
+  }
+
+  if (changes.boardData) {
+    boardDataCache = changes.boardData.newValue && typeof changes.boardData.newValue === 'object' ? changes.boardData.newValue : {};
+    updateUI(boardDataCache);
+    reorderBoardDomIfNeeded();
+  }
+
+  if (changes.lastUpdateTime) {
+    lastSuccessfulSyncTime = typeof changes.lastUpdateTime.newValue === 'string' ? changes.lastUpdateTime.newValue : '';
+  }
+
+  if (changes.colorMode) {
+    applyColorMode(changes.colorMode.newValue);
+  }
+
+  if (isBatchRefreshing) {
     return;
   }
 
   if (changes.siteConfigs) {
     applyExternalSiteConfigsChange(changes.siteConfigs.newValue);
   }
-
-  if (changes.colorMode) {
-    applyColorMode(changes.colorMode.newValue);
-  }
 });
 setMenuOpen(false);
-const initPromise = init();
+const initPromise = init().catch(console.error);

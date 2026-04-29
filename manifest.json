@@ -17,9 +17,13 @@
     }
   },
   "permissions": [
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [
     "<all_urls>"
-  ]
+  ],
+  "background": {
+    "service_worker": "src/background/auto-refresh.js"
+  }
 }

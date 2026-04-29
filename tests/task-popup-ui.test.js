@@ -9,6 +9,8 @@ assert(/<button id="addSiteBtn"[\s\S]*?>\s*站点\s*<\/button>/.test(html), 'pop
 assert(/<button id="menuToggleBtn"[\s\S]*?>\s*配置\s*<\/button>/.test(html), 'popup 应提供“配置”按钮文案');
 assert(/<button id="refreshBtn"[\s\S]*?>\s*同步\s*<\/button>/.test(html), 'popup 应提供“同步”按钮文案');
 assert(html.includes('>卡片<'), '设置项文案应为“卡片”');
+assert(html.includes('id="autoRefreshToggle"'), '设置面板应提供自动刷新切换控件');
+assert(/<span class="menu-label">自动刷新<\/span>[\s\S]*<button id="autoRefreshToggle" class="menu-switch" type="button" role="switch" aria-checked="false" aria-label="切换自动刷新"><\/button>/.test(html), '自动刷新应复用 menu-switch 开关');
 assert(html.includes('>颜色模式<'), '设置面板应提供颜色模式项');
 assert(/body\s*\{[\s\S]*width:\s*480px;/.test(html), 'popup 面板宽度应为 480px');
 assert(html.includes('id="colorModeToggle"'), '设置面板应提供颜色模式切换控件');
