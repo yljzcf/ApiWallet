@@ -55,6 +55,7 @@ ApiWallet 是一个 Chrome Manifest V3 扩展，用于在浏览器本地创建�
 .
 ├── manifest.json
 ├── README.md
+├── LICENSE
 ├── icons/
 │   ├── icon-16.png
 │   ├── icon-32.png
@@ -74,36 +75,6 @@ ApiWallet 是一个 Chrome Manifest V3 扩展，用于在浏览器本地创建�
         └── site-config-shared.js
 ```
 
-## 发布打包
+## License
 
-发布前建议先做语法检查：
-
-```bash
-node --check "src/background/auto-refresh.js"
-node --check "src/pages/popup.js"
-node --check "src/pages/add-site.js"
-node --check "src/shared/site-config-shared.js"
-```
-
-打包运行必需文件：
-
-```bash
-zip -r "apiwallet-1.2.0.zip" \
-  manifest.json \
-  README.md \
-  icons/icon-16.png \
-  icons/icon-32.png \
-  icons/icon-48.png \
-  icons/icon-128.png \
-  src/background/auto-refresh.js \
-  src/pages/popup.html \
-  src/pages/popup.js \
-  src/pages/add-site.html \
-  src/pages/add-site.js \
-  src/shared/site-config-shared.js \
-  src/config/site-config.public.json
-```
-
-## 安全提醒
-
-不要提交 `site-config.private.json`、`.env`、token、Cookie、私有请求头或私人站点配置。发布前请检查导出的配置文件，确认其中不包含敏感信息。
+MIT License. See [LICENSE](LICENSE) for details.
