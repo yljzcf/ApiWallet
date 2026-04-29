@@ -476,10 +476,14 @@
     }
 
     .config-board {
-      min-height: 260px;
+      --config-card-width: 180px;
+      --config-board-columns: 1;
+      --config-board-gap: 10px;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(var(--config-board-columns), var(--config-card-width));
+      gap: var(--config-board-gap);
+      align-items: start;
+      justify-content: start;
       padding: 14px;
       border-radius: 18px;
       border: 1px dashed var(--panel-border);
@@ -487,14 +491,62 @@
     }
 
     .config-board-empty {
-      min-height: 180px;
+      min-height: 96px;
       display: grid;
       place-items: center;
-      padding: 24px;
+      grid-column: 1 / -1;
+      padding: 20px;
       border-radius: 16px;
       background: var(--input-fill);
       color: var(--text-secondary);
       text-align: center;
+    }
+
+    .config-board-card {
+      width: var(--config-card-width);
+      min-height: 76px;
+      height: auto;
+      display: grid;
+      justify-content: stretch;
+      align-content: center;
+      justify-items: start;
+      gap: 8px;
+      padding: 12px 13px;
+      border-radius: 16px;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .config-board-card.is-group {
+      position: relative;
+      border-color: rgba(154, 240, 222, 0.36);
+      background:
+        linear-gradient(135deg, rgba(120, 224, 202, 0.18), rgba(255, 255, 255, 0.035)),
+        var(--panel-soft);
+      box-shadow: inset 3px 0 0 rgba(154, 240, 222, 0.58);
+    }
+
+    .config-card-kind {
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-strong);
+    }
+
+    .config-card-name {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+      font-weight: 750;
+      color: var(--text-primary);
+    }
+
+    .config-board-card.is-group .config-card-kind {
+      color: #d9fff6;
     }
 
     .board-card-menu {

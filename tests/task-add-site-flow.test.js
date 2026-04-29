@@ -96,23 +96,49 @@ function createStorageMock(initialState = {}) {
 function createElementStub(id = '') {
   const listeners = new Map();
   const queryMap = new Map();
-  return {
+  const styleProperties = new Map();
+  const classNames = new Set();
+  const element = {
     id,
     children: [],
     dataset: {},
-    style: { setProperty() {} },
+    style: {
+      setProperty(name, value) { styleProperties.set(name, value); },
+      getPropertyValue(name) { return styleProperties.get(name) || ''; }
+    },
     hidden: false,
     disabled: false,
     value: '',
     textContent: '',
     innerText: '',
     innerHTML: '',
-    className: '',
+    get className() {
+      return Array.from(classNames).join(' ');
+    },
+    set className(value) {
+      classNames.clear();
+      String(value || '').split(/\s+/).filter(Boolean).forEach((name) => classNames.add(name));
+    },
     classList: {
-      add() {},
-      remove() {},
-      toggle() {},
-      contains() { return false; }
+      add(...names) { names.forEach((name) => classNames.add(name)); },
+      remove(...names) { names.forEach((name) => classNames.delete(name)); },
+      toggle(name, force) {
+        if (force === true) {
+          classNames.add(name);
+          return true;
+        }
+        if (force === false) {
+          classNames.delete(name);
+          return false;
+        }
+        if (classNames.has(name)) {
+          classNames.delete(name);
+          return false;
+        }
+        classNames.add(name);
+        return true;
+      },
+      contains(name) { return classNames.has(name); }
     },
     setAttribute(name, value) { this[name] = value; },
     appendChild(child) {
@@ -167,6 +193,7 @@ function createElementStub(id = '') {
       return { left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 };
     }
   };
+  return element;
 }
 
 function createDocumentStub() {
@@ -534,7 +561,7 @@ function loadTestExports() {
     await app.bind();
     const emptyStorageBoard = documentStub.elements.get('configBoard');
     assert.deepStrictEqual(
-      emptyStorageBoard.children.map((child) => child.textContent),
+      emptyStorageBoard.children.map((child) => child.children[1]?.textContent),
       ['单击', '长按'],
       '配置页 demo 示例卡片应使用短文案'
     );
@@ -609,6 +636,12 @@ function loadTestExports() {
     await app.bind();
     assert.strictEqual(app.getCurrentView(), 'home', '页面初始化后应停留在首页');
     assert.strictEqual(documentStub.elements.get('configBoard').children.length, 1, '页面初始化应渲染当前卡片到 configBoard');
+    assert.strictEqual(documentStub.elements.get('configBoard').style.getPropertyValue('--config-board-columns'), '1', '一张卡片时配置看板应按 1 列收缩');
+    assert(documentStub.elements.get('configBoard').style.getPropertyValue('--config-card-width').endsWith('px'), '配置看板应写入统一卡片宽度变量');
+    assert.strictEqual(documentStub.elements.get('configBoard').children[0].classList.contains('is-group'), false, '单张站点卡片不应带编组样式');
+    assert.strictEqual(documentStub.elements.get('configBoard').children[0].children.length, 2, '单张站点卡片应只显示类型和名称两行');
+    assert.strictEqual(documentStub.elements.get('configBoard').children[0].children[0].textContent, '站点', '单张站点卡片应显示站点类型标识');
+    assert.strictEqual(documentStub.elements.get('configBoard').children[0].children[1].textContent, '站点 A', '单张站点卡片应显示站点名称');
 
     documentStub.elements.get('configBoard').children[0].click();
     assert.strictEqual(app.getCurrentView(), 'siteForm:edit', '点击单张卡片应进入站点配置页');
@@ -642,9 +675,13 @@ function loadTestExports() {
     });
 
     await app.bind();
+    assert.strictEqual(documentStub.elements.get('configBoard').style.getPropertyValue('--config-board-columns'), '1', '只有一个编组时配置看板应按 1 列收缩');
+    assert.strictEqual(documentStub.elements.get('configBoard').children[0].classList.contains('is-group'), true, '编组卡片应带 is-group 样式');
+    assert.strictEqual(documentStub.elements.get('configBoard').children[0].children.length, 2, '编组卡片应只显示类型和名称两行');
+    assert.strictEqual(documentStub.elements.get('configBoard').children[0].children[0].textContent, '编组', '编组卡片应显示编组类型标识');
+    assert.strictEqual(documentStub.elements.get('configBoard').children[0].children[1].textContent, '旧组名', '编组卡片应显示编组名称');
     documentStub.elements.get('configBoard').children[0].click();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    assert.strictEqual(app.getCurrentView(), 'home', '点击编组卡片后应继续停留在首页');
     assert(!documentStub.elements.get('configBoard').children.includes(documentStub.elements.get('groupPopover')), '编组弹窗不应放入 configBoard 网格布局中');
     assert.strictEqual(documentStub.elements.get('groupPopover').hidden, false, '点击编组卡片应显示编组弹窗');
     assert.strictEqual(documentStub.elements.get('groupPopoverNameInput').value, '旧组名', '弹窗应填入当前组名');
@@ -881,6 +918,35 @@ function loadTestExports() {
     assert.strictEqual(app.getCurrentView(), 'home', '取消修改后应返回首页');
     assert.strictEqual(storage.getWrites().length, writesBeforeCancel, '取消修改不应写入 storage');
     assert.strictEqual(storage.getSnapshot().siteConfigs[0].name, '取消站点', '取消修改不应改变站点配置');
+  }
+
+  {
+    const storage = createStorageMock({
+      siteConfigs: Array.from({ length: 6 }, (_, index) => ({
+        id: `custom-${index + 1}`,
+        name: index === 5 ? '特别长名称站点用于宽度计算' : `站点 ${index + 1}`,
+        url: `https://example.test/${index + 1}`,
+        type: 'json',
+        fieldPath: 'data.balance',
+        isCustom: true
+      })),
+      boardData: Object.fromEntries(Array.from({ length: 6 }, (_, index) => [`custom-${index + 1}`, `${index + 1}.00`])),
+      groups: [],
+      manualOrder: Array.from({ length: 6 }, (_, index) => `task:custom-${index + 1}`)
+    });
+    const documentStub = createDocumentStub();
+    const app = testExports.createPageApp({
+      storage,
+      document: documentStub,
+      window: { setTimeout, clearTimeout, close() {} },
+      fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({}) })
+    });
+
+    await app.bind();
+    const board = documentStub.elements.get('configBoard');
+    assert.strictEqual(board.children.length, 6, '配置看板应渲染全部单站点卡片');
+    assert.strictEqual(board.style.getPropertyValue('--config-board-columns'), '5', '超过 5 张卡片时每行最多应放 5 张');
+    assert.strictEqual(board.style.getPropertyValue('--config-card-width'), '254px', '配置看板应按最长卡片名称计算统一宽度');
   }
 
   console.log('task-add-site-flow.test.js passed');

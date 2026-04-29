@@ -1199,12 +1199,58 @@ function createPageApp(options = {}) {
     }
   }
 
+  function getConfigCardName(card) {
+    return card.type === 'group' ? card.name : card.task?.name;
+  }
+
+  function getConfigCardWidth(cards) {
+    const longestNameLength = cards.reduce((maxLength, card) => {
+      const name = getConfigCardName(card) || '';
+      return Math.max(maxLength, Array.from(name).length);
+    }, 0);
+    return Math.max(160, Math.min(280, longestNameLength * 14 + 72));
+  }
+
+  function applyConfigBoardLayout(cards) {
+    const count = cards.length;
+    const columns = Math.max(1, Math.min(count, 5));
+    refs.configBoard.style.setProperty('--config-board-columns', String(columns));
+    refs.configBoard.style.setProperty('--config-card-width', `${getConfigCardWidth(cards)}px`);
+  }
+
+  function createConfigBoardCard(card) {
+    const cardElement = pageDocument.createElement('button');
+    cardElement.type = 'button';
+    cardElement.className = card.type === 'group' ? 'config-board-card is-group' : 'config-board-card';
+
+    const kind = pageDocument.createElement('span');
+    kind.className = 'config-card-kind';
+    kind.textContent = card.type === 'group' ? '编组' : '站点';
+
+    const name = pageDocument.createElement('span');
+    name.className = 'config-card-name';
+    name.textContent = getConfigCardName(card) || '未命名';
+
+    cardElement.appendChild(kind);
+    cardElement.appendChild(name);
+    cardElement.addEventListener('click', async (event) => {
+      if (card.type === 'group') {
+        event.stopPropagation?.();
+        await openGroupPopover(card);
+        return;
+      }
+      await openSiteEdit(card);
+    });
+    return cardElement;
+  }
+
   async function renderConfigBoard() {
     if (!refs.configBoard) {
       return null;
     }
     const snapshot = await boardEditor.loadDraft();
     const boardChildren = [];
+    applyConfigBoardLayout(snapshot.cards);
     if (refs.configBoardEmpty) {
       refs.configBoardEmpty.hidden = snapshot.cards.length > 0;
       if (snapshot.cards.length === 0) {
@@ -1212,19 +1258,7 @@ function createPageApp(options = {}) {
       }
     }
     snapshot.cards.forEach((card) => {
-      const cardElement = pageDocument.createElement('button');
-      cardElement.type = 'button';
-      cardElement.className = card.type === 'group' ? 'config-board-card is-group' : 'config-board-card';
-      cardElement.textContent = card.type === 'group' ? card.name : card.task.name;
-      cardElement.addEventListener('click', async (event) => {
-        if (card.type === 'group') {
-          event.stopPropagation?.();
-          await openGroupPopover(card);
-          return;
-        }
-        await openSiteEdit(card);
-      });
-      boardChildren.push(cardElement);
+      boardChildren.push(createConfigBoardCard(card));
     });
     refs.configBoard.replaceChildren(...boardChildren);
     return snapshot;

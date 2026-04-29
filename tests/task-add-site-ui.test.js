@@ -8,11 +8,15 @@ const targetPath = path.join(projectRoot, 'src/pages/add-site.html');
 assert(fs.existsSync(targetPath), '文件不存在: add-site.html');
 
 const html = fs.readFileSync(targetPath, 'utf8');
+const manifest = JSON.parse(fs.readFileSync(path.join(projectRoot, 'manifest.json'), 'utf8'));
 const compactHtml = html.replace(/\s+/g, ' ');
 const bodyHtml = html.slice(html.indexOf('<body'));
 const homeSectionMatch = bodyHtml.match(/<section[^>]+id="homePanel"[\s\S]*?<\/section>/);
 const siteFormMatch = bodyHtml.match(/<section[^>]+id="siteConfigPanel"[\s\S]*?<\/section>/);
 const advancedSectionMatch = bodyHtml.match(/<section[^>]+class="advanced-settings"[\s\S]*?<\/section>/);
+
+assert.strictEqual(manifest.name, 'ApiWallet - 钱包看板', '扩展名称应更新为 ApiWallet - 钱包看板');
+assert.strictEqual(manifest.version, '1.2.0', '扩展版本号应更新为 1.2.0');
 
 assert(/站点管理|id="siteManagerLayout"/.test(html), '独立页面应是站点管理页');
 assert(/id="homePanel"/.test(html), '配置页应有首页容器 homePanel');
@@ -20,6 +24,15 @@ assert(homeSectionMatch, '首页容器应是独立 section，便于只显示首�
 
 const homeHtml = homeSectionMatch ? homeSectionMatch[0] : '';
 assert(/id="configBoard"/.test(homeHtml), '首页应显示当前卡片展示区');
+assert(/\.config-board\s*\{[\s\S]*--config-card-width:\s*[^;]+;[\s\S]*--config-board-columns:\s*1;[\s\S]*grid-template-columns:\s*repeat\(var\(--config-board-columns\),\s*var\(--config-card-width\)\);[\s\S]*align-items:\s*start;/.test(html), '配置看板应使用统一自适应卡片宽度和最多 5 列布局');
+assert(!/\.config-board\s*\{[\s\S]*width:\s*min\(100%,\s*calc\(var\(--config-card-width\) \* var\(--config-board-columns\)/.test(html), '配置看板区宽度应恢复铺满面板，不应按卡片数量收缩');
+assert(!/\.config-board\s*\{[\s\S]*min-height:\s*260px;/.test(html), '配置看板不应保留过高的 260px 最小高度');
+assert(/\.config-board-empty\s*\{[\s\S]*min-height:\s*96px;[\s\S]*grid-column:\s*1\s*\/\s*-1;/.test(html), '配置看板空态应降低高度并横跨可用宽度');
+assert(!/\.config-board-empty\s*\{[\s\S]*min-height:\s*180px;/.test(html), '配置看板空态不应保留 180px 高度预留');
+assert(/\.config-board-card\s*\{[\s\S]*width:\s*var\(--config-card-width\);[\s\S]*min-height:\s*76px;[\s\S]*display:\s*grid;/.test(html), '配置卡片应使用统一自适应宽度和紧凑高度');
+assert(/\.config-board-card\.is-group\s*\{[\s\S]*border-color:\s*rgba\(154,\s*240,\s*222,\s*0\.36\);[\s\S]*background:[\s\S]*linear-gradient/.test(html), '编组卡片应有区别于普通站点卡片的强调样式');
+assert(/\.config-card-kind\s*\{[\s\S]*text-transform:\s*uppercase;/.test(html), '配置卡片应提供类型标识样式');
+assert(!/\.config-card-meta\s*\{/.test(html), '配置卡片不应再提供第三行辅助文字样式');
 assert(/id="addSiteConfigBtn"[^>]*>[\s\S]*新增站点/.test(homeHtml), '首页应显示“新增站点”按钮');
 assert(/id="importFileBtn"[^>]*>[\s\S]*导入配置/.test(homeHtml), '首页应显示“导入配置”按钮');
 assert(/id="exportSitesBtn"[^>]*>[\s\S]*导出配置/.test(homeHtml), '首页应显示“导出配置”按钮');
