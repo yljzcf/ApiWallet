@@ -809,6 +809,18 @@ function createBoardEditorController(options = {}) {
   };
 }
 
+function getConfigBoardColumnCount(count, cardWidth, availableWidth = 1280, gap = 10) {
+  const maxColumns = Math.max(1, Math.min(count, 5));
+  const safeAvailableWidth = Number.isFinite(availableWidth) && availableWidth > 0 ? availableWidth : 1280;
+  for (let columns = maxColumns; columns > 1; columns -= 1) {
+    const gridWidth = columns * cardWidth + (columns - 1) * gap;
+    if (gridWidth <= safeAvailableWidth) {
+      return columns;
+    }
+  }
+  return 1;
+}
+
 async function detectAndApplyColorMode(storage = chrome.storage.local) {
   const stored = await storage.get(STORAGE_KEYS);
   const colorMode = stored.colorMode === 'light' ? 'light' : 'dark';
@@ -1213,11 +1225,17 @@ function createPageApp(options = {}) {
     return Math.max(160, Math.min(280, longestNameLength * 14 + 72));
   }
 
+  function getConfigBoardAvailableWidth() {
+    const boardWidth = refs.configBoard?.clientWidth || refs.configBoard?.parentElement?.clientWidth || 1280;
+    return Math.max(0, boardWidth - 28);
+  }
+
   function applyConfigBoardLayout(cards) {
     const count = cards.length;
-    const columns = Math.max(1, Math.min(count, 5));
+    const cardWidth = getConfigCardWidth(cards);
+    const columns = getConfigBoardColumnCount(count, cardWidth, getConfigBoardAvailableWidth(), 10);
     refs.configBoard.style.setProperty('--config-board-columns', String(columns));
-    refs.configBoard.style.setProperty('--config-card-width', `${getConfigCardWidth(cards)}px`);
+    refs.configBoard.style.setProperty('--config-card-width', `${cardWidth}px`);
   }
 
   function createConfigBoardCard(card) {
@@ -1770,7 +1788,8 @@ this.__testExports = {
   createBoardEditorController,
   createPageApp,
   buildPersistedSiteConfigsFromRuntime,
-  buildCustomTaskConfig
+  buildCustomTaskConfig,
+  getConfigBoardColumnCount
 };
 
 if (typeof document !== 'undefined' && document.getElementById('siteNameInput')) {

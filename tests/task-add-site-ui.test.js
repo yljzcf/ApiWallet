@@ -24,7 +24,8 @@ assert(homeSectionMatch, '首页容器应是独立 section，便于只显示首�
 
 const homeHtml = homeSectionMatch ? homeSectionMatch[0] : '';
 assert(/id="configBoard"/.test(homeHtml), '首页应显示当前卡片展示区');
-assert(/\.config-board\s*\{[\s\S]*--config-card-width:\s*[^;]+;[\s\S]*--config-board-columns:\s*1;[\s\S]*grid-template-columns:\s*repeat\(var\(--config-board-columns\),\s*var\(--config-card-width\)\);[\s\S]*align-items:\s*start;[\s\S]*justify-content:\s*center;/.test(html), '配置看板应使用统一自适应卡片宽度、最多 5 列布局，并让内部卡片组居中');
+assert(/\.config-board\s*\{[\s\S]*--config-card-width:\s*[^;]+;[\s\S]*--config-board-columns:\s*1;[\s\S]*grid-template-columns:\s*repeat\(var\(--config-board-columns\),\s*var\(--config-card-width\)\);[\s\S]*align-items:\s*start;[\s\S]*justify-content:\s*start;/.test(html), '配置看板应使用统一自适应卡片宽度、动态列数布局，并让卡片保持居左');
+assert(!/\.config-board\s*\{(?:(?!\n\s*\}).)*justify-content:\s*center;/s.test(html), '配置看板卡片不应居中显示，避免编组后视觉右偏');
 assert(!/\.config-board\s*\{[\s\S]*width:\s*min\(100%,\s*calc\(var\(--config-card-width\) \* var\(--config-board-columns\)/.test(html), '配置看板区宽度应恢复铺满面板，不应按卡片数量收缩');
 assert(!/\.config-board\s*\{[\s\S]*min-height:\s*260px;/.test(html), '配置看板不应保留过高的 260px 最小高度');
 assert(/\.config-board-empty\s*\{[\s\S]*min-height:\s*96px;[\s\S]*grid-column:\s*1\s*\/\s*-1;/.test(html), '配置看板空态应降低高度并横跨可用宽度');

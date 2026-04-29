@@ -338,6 +338,7 @@ function loadTestExports() {
   assert.strictEqual(typeof createSiteManager, 'function', '应提供站点管理控制器');
   assert.strictEqual(typeof testExports.createPageApp, 'function', '应提供 createPageApp 以测试页面路线');
   assert.strictEqual(typeof testExports.createBoardEditorController, 'function', '应提供 createBoardEditorController 以测试看板草稿');
+  assert.strictEqual(typeof testExports.getConfigBoardColumnCount, 'function', '应提供看板列数计算函数以测试宽卡片布局');
   assert.deepStrictEqual(testExports.__fetchCalls, [], '站点管理页初始化时不应自动加载外置 JSON 默认站点配置');
 
   {
@@ -927,6 +928,12 @@ function loadTestExports() {
   }
 
   {
+    assert.strictEqual(testExports.getConfigBoardColumnCount(6, 254, 1280, 10), 4, '宽卡片时每行不应硬塞 5 张，应按可用宽度减少列数');
+    assert.strictEqual(testExports.getConfigBoardColumnCount(6, 160, 1280, 10), 5, '普通宽度卡片仍应最多每行显示 5 张');
+    assert.strictEqual(testExports.getConfigBoardColumnCount(3, 280, 760, 10), 2, '窄面板内宽卡片应继续减少列数');
+  }
+
+  {
     const storage = createStorageMock({
       siteConfigs: Array.from({ length: 6 }, (_, index) => ({
         id: `custom-${index + 1}`,
@@ -951,8 +958,45 @@ function loadTestExports() {
     await app.bind();
     const board = documentStub.elements.get('configBoard');
     assert.strictEqual(board.children.length, 6, '配置看板应渲染全部单站点卡片');
-    assert.strictEqual(board.style.getPropertyValue('--config-board-columns'), '5', '超过 5 张卡片时每行最多应放 5 张');
+    assert.strictEqual(board.style.getPropertyValue('--config-board-columns'), '4', '宽卡片时每行应少于 5 张，避免看板区域过宽');
     assert.strictEqual(board.style.getPropertyValue('--config-card-width'), '254px', '配置看板应按最长卡片名称计算统一宽度');
+  }
+
+  {
+    const storage = createStorageMock({
+      siteConfigs: [
+        { id: 'custom-a', name: '站点 A', url: 'https://example.test/a', type: 'json', fieldPath: 'data.balance', isCustom: true },
+        { id: 'custom-b', name: '站点 B', url: 'https://example.test/b', type: 'json', fieldPath: 'data.balance', isCustom: true },
+        { id: 'custom-c', name: '站点 C', url: 'https://example.test/c', type: 'json', fieldPath: 'data.balance', isCustom: true },
+        { id: 'custom-d', name: '站点 D', url: 'https://example.test/d', type: 'json', fieldPath: 'data.balance', isCustom: true },
+        { id: 'custom-e', name: '站点 E', url: 'https://example.test/e', type: 'json', fieldPath: 'data.balance', isCustom: true },
+        { id: 'custom-f', name: '站点 F', url: 'https://example.test/f', type: 'json', fieldPath: 'data.balance', isCustom: true }
+      ],
+      boardData: {},
+      groups: [{ id: 'group:wide', name: '特别长名称编组用于宽度计算', taskIds: ['custom-a', 'custom-b'] }],
+      manualOrder: ['group:wide', 'task:custom-c', 'task:custom-d', 'task:custom-e', 'task:custom-f']
+    });
+    const documentStub = createDocumentStub();
+    const app = testExports.createPageApp({
+      storage,
+      document: documentStub,
+      window: { setTimeout, clearTimeout, close() {} },
+      fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({}) })
+    });
+
+    await app.bind();
+    const board = documentStub.elements.get('configBoard');
+    const columnsBeforePopover = board.style.getPropertyValue('--config-board-columns');
+    assert.strictEqual(board.children.length, 5, '编组看板应只渲染编组卡片和未编组站点卡片');
+    assert.strictEqual(columnsBeforePopover, '4', '编组名称较长时应减少列数，避免编组后看板过宽');
+    assert.strictEqual(board.children[0].classList.contains('is-group'), true, '第一张应为编组卡片');
+
+    await board.children[0].click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.strictEqual(documentStub.elements.get('groupPopover').hidden, false, '点击编组应打开弹窗');
+    assert.strictEqual(board.children.length, 5, '打开编组弹窗不应增加 configBoard 网格子节点');
+    assert.strictEqual(board.style.getPropertyValue('--config-board-columns'), columnsBeforePopover, '打开编组弹窗不应改变看板列数变量');
+    assert(!board.children.includes(documentStub.elements.get('groupPopover')), '编组弹窗不应放入 configBoard 网格布局中');
   }
 
   console.log('task-add-site-flow.test.js passed');
