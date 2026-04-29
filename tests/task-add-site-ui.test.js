@@ -45,7 +45,12 @@ const siteFormHtml = siteFormMatch ? siteFormMatch[0].replace(/\s+/g, ' ') : '';
 assert(/class="[^"]*site-config-card/.test(siteFormHtml), '单站点配置页应使用现代卡片式主容器');
 assert(/id="backHomeBtn"[\s\S]*返回面板/.test(html), '单站点配置页应提供返回面板按钮');
 assert(!/class="[^"]*site-name-field[\s\S]*<span class="label">站点名<\/span>/.test(siteFormHtml), '站点名输入框上方不应显示突出文字标签');
-assert(/\.site-config-actions\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+48px;[\s\S]*gap:\s*0;/.test(html), '完成配置动作区应使用合并式 split button 布局');
+assert(/\.site-config-card\s*\{[\s\S]*--site-control-height:\s*44px;[\s\S]*--site-action-width:\s*150px;/.test(html), '单站点配置页应定义统一控件高度和动作区宽度');
+assert(/\.site-config-card__topbar\s*\{[\s\S]*grid-template-columns:\s*var\(--site-action-width\)\s+minmax\(0,\s*1fr\)\s+var\(--site-action-width\);/.test(html), '顶部返回、站点名和完成配置动作区应使用统一动作宽度列');
+assert(/\.site-config-actions\s*\{[\s\S]*width:\s*var\(--site-action-width\);[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+48px;[\s\S]*gap:\s*0;/.test(html), '完成配置动作区应使用固定宽度的合并式 split button 布局');
+assert(/#backHomeBtn,\s*#fetchRawValueBtn,\s*#testCalculationBtn\s*\{[\s\S]*width:\s*var\(--site-action-width\);/.test(html), '返回面板、访问接口和测试计算按钮应使用同一宽度');
+assert(/#siteConfigPanel\s+button,[\s\S]*#siteConfigPanel\s+input,[\s\S]*#siteConfigPanel\s+select\s*\{[\s\S]*height:\s*var\(--site-control-height\);[\s\S]*box-sizing:\s*border-box;/.test(html), '单站点配置页按钮、输入框和下拉框应统一高度');
+assert(/#finishSiteConfigBtn,[\s\S]*#siteActionMenuToggle\s*\{[\s\S]*background:\s*var\(--accent-soft\);[\s\S]*border-color:\s*rgba\(154,\s*240,\s*222,\s*0\.28\);/.test(html), '完成配置按钮和下拉按钮应使用相同背景与边框色');
 assert(/#finishSiteConfigBtn\s*\{[\s\S]*border-top-right-radius:\s*0;[\s\S]*border-bottom-right-radius:\s*0;/.test(html), '完成配置按钮右侧应与下拉按钮合并');
 assert(/\.site-action-menu-toggle\s*\{[\s\S]*border-top-left-radius:\s*0;[\s\S]*border-bottom-left-radius:\s*0;/.test(html), '下拉按钮左侧应与完成配置按钮合并');
 assert(/class="[^"]*site-config-actions/.test(siteFormHtml), '单站点配置页应提供完成配置动作区');
@@ -71,7 +76,9 @@ assert(!/button\.innerHTML\s*=\s*`[\s\S]*\$\{site\.fieldPath/.test(addSiteJs), '
 
 assert(advancedSectionMatch, '配置页应提供高级配置区域');
 const advancedHtml = advancedSectionMatch ? advancedSectionMatch[0] : '';
-assert(/\.raw-value-card,\s*\.calculated-value-card\s*\{[\s\S]*min-height:\s*48px;[\s\S]*grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\);/.test(html), '原值和计算结果展示应使用紧凑的一行高度控件');
+assert(/\.raw-value-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+var\(--site-action-width\);/.test(html), '原值行右侧访问接口按钮应使用统一动作宽度');
+assert(/\.formula-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+var\(--site-action-width\);/.test(html), '公式行右侧测试计算按钮应使用统一动作宽度');
+assert(/\.raw-value-card,\s*\.calculated-value-card\s*\{[\s\S]*min-height:\s*var\(--site-control-height\);[\s\S]*height:\s*var\(--site-control-height\);[\s\S]*grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\);/.test(html), '原值和计算结果展示应使用统一高度的一行控件');
 assert(!/\.raw-value-card,\s*\.calculated-value-card\s*\{[\s\S]*min-height:\s*76px;/.test(html), '原值和计算结果展示不应保留过高卡片');
 assert(/id="rawValueSection"[\s\S]*id="rawValueText"[\s\S]*id="fetchRawValueBtn"/.test(html), '原值行应同时包含原值展示和访问接口按钮');
 assert(/id="advancedSettingsToggle"[\s\S]*点击展开高级设置/.test(html), '高级配置应提供默认收起的展开入口');

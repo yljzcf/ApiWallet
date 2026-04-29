@@ -566,6 +566,8 @@
     }
 
     .site-config-card {
+      --site-control-height: 44px;
+      --site-action-width: 150px;
       width: min(100%, 760px);
       margin: 0 auto;
       display: grid;
@@ -573,28 +575,57 @@
       padding: 4px;
     }
 
+    #siteConfigPanel button,
+    #siteConfigPanel input,
+    #siteConfigPanel select {
+      height: var(--site-control-height);
+      box-sizing: border-box;
+    }
+
+    #siteConfigPanel input,
+    #siteConfigPanel select {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
     .site-config-card__topbar {
       display: grid;
-      grid-template-columns: minmax(120px, auto) minmax(260px, 1fr) minmax(150px, auto);
+      grid-template-columns: var(--site-action-width) minmax(0, 1fr) var(--site-action-width);
       gap: 14px;
       align-items: end;
     }
 
+    #backHomeBtn,
+    #fetchRawValueBtn,
+    #testCalculationBtn {
+      width: var(--site-action-width);
+    }
+
     .site-config-actions {
       position: relative;
+      width: var(--site-action-width);
       display: grid;
       grid-template-columns: minmax(0, 1fr) 48px;
       gap: 0;
       align-items: stretch;
     }
 
+    #finishSiteConfigBtn,
+    #siteActionMenuToggle {
+      background: var(--accent-soft);
+      border-color: rgba(154, 240, 222, 0.28);
+      color: var(--text-primary);
+    }
+
     #finishSiteConfigBtn {
+      width: 100%;
       border-top-right-radius: 0;
       border-bottom-right-radius: 0;
       border-right: 0;
     }
 
     .site-action-menu-toggle {
+      width: 100%;
       padding: 0;
       border-top-left-radius: 0;
       border-bottom-left-radius: 0;
@@ -640,19 +671,21 @@
 
     .raw-value-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(136px, auto);
+      grid-template-columns: minmax(0, 1fr) var(--site-action-width);
       gap: 12px;
       align-items: stretch;
     }
 
     .raw-value-card,
     .calculated-value-card {
-      min-height: 48px;
+      min-height: var(--site-control-height);
+      height: var(--site-control-height);
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: 10px;
       align-items: center;
-      padding: 10px 12px;
+      padding: 0 12px;
+      box-sizing: border-box;
     }
 
     .raw-value-card .metric-label,
@@ -684,7 +717,7 @@
 
     .formula-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+      grid-template-columns: minmax(0, 1fr) var(--site-action-width);
       gap: 12px;
       align-items: end;
     }
@@ -717,6 +750,13 @@
       .step-strip,
       .edit-auth-grid {
         grid-template-columns: 1fr;
+      }
+
+      #backHomeBtn,
+      .site-config-actions,
+      #fetchRawValueBtn,
+      #testCalculationBtn {
+        width: 100%;
       }
     }
   </style>
