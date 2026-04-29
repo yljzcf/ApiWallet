@@ -6,6 +6,7 @@ const vm = require('vm');
 
 function createElementStub() {
   return {
+    attributes: {},
     style: { setProperty() {} },
     dataset: {},
     hidden: false,
@@ -20,7 +21,7 @@ function createElementStub() {
       toggle() {},
       contains() { return false; }
     },
-    setAttribute() {},
+    setAttribute(name, value) { this.attributes[name] = String(value); },
     addEventListener() {},
     removeEventListener() {},
     appendChild() {},
@@ -108,7 +109,10 @@ function loadPopupSandbox() {
       fetchCalls.push(url);
       return { ok: true, json: async () => ({}) };
     },
-    __fetchCalls: fetchCalls
+    __fetchCalls: fetchCalls,
+    __getStorageChangeListener() {
+      return storageChangeListener;
+    }
   };
 
   vm.createContext(sandbox);
@@ -122,6 +126,8 @@ function loadPopupSandbox() {
     setSiteConfigs,
     normalizeColorMode,
     applyColorMode,
+    applyAutoRefreshEnabled,
+    handleAutoRefreshToggle,
     buildCustomTaskConfig,
     SiteConfigShared: globalThis.SiteConfigShared,
     __fetchCalls: globalThis.__fetchCalls,
@@ -137,8 +143,17 @@ function loadPopupSandbox() {
         groups: groupsCache,
         manualOrder: manualOrderCache,
         siteConfigs: getTaskList(),
-        persistedSiteConfigs: persistedSiteConfigsCache
+        persistedSiteConfigs: persistedSiteConfigsCache,
+        autoRefreshEnabled,
+        lastSuccessfulSyncTime,
+        isBatchRefreshing
       };
+    },
+    getRenderedValue(taskId) {
+      return getCardElements(taskId)?.values?.get(taskId)?.innerText;
+    },
+    setBatchRefreshing(nextValue) {
+      isBatchRefreshing = Boolean(nextValue);
     },
     removeSiteTask,
     renameSiteTask,
@@ -240,12 +255,23 @@ function loadPopupSandbox() {
     autoSortEnabled: false,
     layoutColumns: 2,
     colorMode: 'light',
+    autoRefreshEnabled: true,
     lastUpdateTime: ''
   });
 
   const popupState = await exported.loadPopupState();
+  exported.applyAutoRefreshEnabled(popupState.autoRefreshEnabled);
   assert.strictEqual(exported.normalizeColorMode('light'), 'light', '应支持 light 主题值');
   assert.strictEqual(exported.normalizeColorMode('weird'), 'dark', '非法主题值应回退为 dark');
+  assert.strictEqual(popupState.autoRefreshEnabled, true, '应从 storage 读取自动刷新状态');
+  assert.strictEqual(exported.getState().autoRefreshEnabled, true, '读取状态后应应用到 popup 运行态与 UI');
+  assert.strictEqual(sandbox.document.getElementById('autoRefreshToggle').attributes['aria-checked'], 'true', '自动刷新开关 UI 应反映已启用状态');
+  persistedPayloads.length = 0;
+  await exported.handleAutoRefreshToggle();
+  assert.strictEqual(persistedPayloads.length, 1, '点击自动刷新开关应写入 storage');
+  assert.strictEqual(JSON.stringify(persistedPayloads[0]), JSON.stringify({ autoRefreshEnabled: false }), '自动刷新开关只应持久化 autoRefreshEnabled，不应直接写入 alarm 相关状态');
+  assert.strictEqual(exported.getState().autoRefreshEnabled, false, '点击后应更新 popup 运行态');
+  assert.strictEqual(sandbox.document.getElementById('autoRefreshToggle').attributes['aria-checked'], 'false', '点击后自动刷新 UI 应同步关闭');
   const customATask = popupState.siteConfigs.find((task) => task.id === 'custom-a');
   assert(customATask, '应保留自定义 A 站点');
   assert.strictEqual(customATask.name, '自定义 A 已保存');
@@ -344,6 +370,54 @@ function loadPopupSandbox() {
   assert.deepStrictEqual(JSON.parse(JSON.stringify(cleanedStateAfterDelete.groups)), [], '配置变更删除站点后应清理包含无效 task 的分组');
   assert.deepStrictEqual(JSON.parse(JSON.stringify(cleanedStateAfterDelete.manualOrder)), ['task:custom-a'], '配置变更删除站点后不应保留悬空 group 顺序项');
   assert.deepStrictEqual(JSON.parse(JSON.stringify(cleanedStateAfterDelete.boardData)), {}, '配置变更删除站点后应清理无效 boardData');
+
+  const storageChangeListener = sandbox.__getStorageChangeListener();
+  assert.strictEqual(typeof storageChangeListener, 'function', '测试应能直接触发 popup 捕获的 storage onChanged listener');
+
+  storageChangeListener({
+    autoRefreshEnabled: { oldValue: false, newValue: true }
+  }, 'local');
+  assert.strictEqual(exported.getState().autoRefreshEnabled, true, 'storage autoRefreshEnabled 变化后应更新 popup 运行态');
+  assert.strictEqual(sandbox.document.getElementById('autoRefreshToggle').attributes['aria-checked'], 'true', 'storage autoRefreshEnabled 变化后应更新开关 UI');
+
+  exported.setState({
+    boardData: {},
+    groups: [],
+    manualOrder: [],
+    siteConfigs: runtimeConfigs
+  });
+  exported.applyExternalSiteConfigsChange(runtimeConfigs);
+  storageChangeListener({
+    boardData: { oldValue: {}, newValue: { 'custom-a': '88.00', 'custom-b': '77.00' } }
+  }, 'local');
+  assert.strictEqual(exported.getState().boardData['custom-a'], '88.00', 'storage boardData 变化后应更新 popup 缓存');
+  assert.strictEqual(exported.getRenderedValue('custom-a'), '88.00', 'storage boardData 变化后应更新对应 DOM 值');
+  assert.strictEqual(exported.getRenderedValue('custom-b'), '77.00', 'storage boardData 变化后应更新其他对应 DOM 值');
+  assert.strictEqual(sandbox.document.getElementById('board').innerHTML, '', 'boardData 变化不应重建整个 board DOM');
+
+  storageChangeListener({
+    boardData: { oldValue: { 'custom-a': '88.00', 'custom-b': '77.00' }, newValue: { 'custom-a': '99.00' } }
+  }, 'local');
+  assert.strictEqual(exported.getRenderedValue('custom-a'), '99.00', 'storage boardData 快照更新已有 key 时应刷新 DOM 值');
+  assert.strictEqual(exported.getRenderedValue('custom-b'), '--', 'storage boardData 快照缺失旧 key 时应清理 DOM 旧值');
+
+  storageChangeListener({
+    lastUpdateTime: { oldValue: '', newValue: '04/29 10:00' }
+  }, 'local');
+  assert.strictEqual(exported.getState().lastSuccessfulSyncTime, '04/29 10:00', 'storage lastUpdateTime 变化后应更新 popup 运行态');
+
+  exported.setBatchRefreshing(true);
+  storageChangeListener({
+    autoRefreshEnabled: { oldValue: true, newValue: false },
+    boardData: { oldValue: { 'custom-a': '88.00' }, newValue: { 'custom-a': '99.00' } },
+    lastUpdateTime: { oldValue: '04/29 10:00', newValue: '04/29 10:01' }
+  }, 'local');
+  assert.strictEqual(exported.getState().isBatchRefreshing, true, '测试前置条件：popup 应处于批量刷新中');
+  assert.strictEqual(exported.getState().autoRefreshEnabled, false, '批量刷新中 storage autoRefreshEnabled 变化不应被早退屏蔽');
+  assert.strictEqual(sandbox.document.getElementById('autoRefreshToggle').attributes['aria-checked'], 'false', '批量刷新中 storage autoRefreshEnabled 变化仍应更新 UI');
+  assert.strictEqual(exported.getState().boardData['custom-a'], '99.00', '批量刷新中 storage boardData 变化不应被早退屏蔽');
+  assert.strictEqual(exported.getState().lastSuccessfulSyncTime, '04/29 10:01', '批量刷新中 storage lastUpdateTime 变化不应被早退屏蔽');
+  exported.setBatchRefreshing(false);
 
   exported.applyExternalSiteConfigsChange([
     {
