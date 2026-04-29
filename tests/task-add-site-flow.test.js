@@ -171,6 +171,7 @@ function createElementStub(id = '') {
 
 function createDocumentStub() {
   const documentListeners = new Map();
+  const queryMap = new Map();
   const ids = [
     'modeCreateBtn',
     'modeEditBtn',
@@ -195,6 +196,9 @@ function createDocumentStub() {
     'advancedSettingsToggle',
     'advancedSettingsPanel',
     'testCalculationBtn',
+    'formulaShortcutXDivide',
+    'formulaShortcutSubtract',
+    'formulaShortcutIncrement',
     'calculationExpressionInput',
     'calculatedValueText',
     'authorizationInput',
@@ -234,6 +238,14 @@ function createDocumentStub() {
     'editFormulaInput'
   ];
   const elements = new Map(ids.map((id) => [id, createElementStub(id)]));
+  elements.get('formulaShortcutXDivide').dataset.calculationExpression = 'X/500000';
+  elements.get('formulaShortcutSubtract').dataset.calculationExpression = '180-X';
+  elements.get('formulaShortcutIncrement').dataset.calculationExpression = 'X+1';
+  queryMap.set('[data-calculation-expression]', [
+    elements.get('formulaShortcutXDivide'),
+    elements.get('formulaShortcutSubtract'),
+    elements.get('formulaShortcutIncrement')
+  ]);
   elements.get('groupPopover').appendChild(elements.get('groupPopoverNameInput'));
   elements.get('groupPopover').appendChild(elements.get('saveGroupNameBtn'));
   elements.get('groupPopover').appendChild(elements.get('groupPopoverTaskList'));
@@ -251,7 +263,7 @@ function createDocumentStub() {
       return elements.get(id) || null;
     },
     querySelector() { return null; },
-    querySelectorAll() { return []; },
+    querySelectorAll(selector) { return queryMap.get(selector) || []; },
     addEventListener(type, listener) {
       documentListeners.set(type, listener);
     },
@@ -663,15 +675,19 @@ function loadTestExports() {
   {
     const storage = createStorageMock({});
     const documentStub = createDocumentStub();
+    let fetchCount = 0;
     const app = testExports.createPageApp({
       storage,
       document: documentStub,
       window: { setTimeout, clearTimeout, close() {} },
-      fetchImpl: async () => ({
-        ok: true,
-        status: 200,
-        async json() { return { data: { balance: 2500000 } }; }
-      })
+      fetchImpl: async () => {
+        fetchCount += 1;
+        return {
+          ok: true,
+          status: 200,
+          async json() { return { data: { balance: 2500000 } }; }
+        };
+      }
     });
 
     await app.bind();
@@ -694,6 +710,20 @@ function loadTestExports() {
     assert.strictEqual(documentStub.elements.get('calculationExpressionInput').value, 'X/500000', '公式输入框失焦后不应清空公式');
     assert.strictEqual(documentStub.elements.get('rawValueText').textContent, '2500000.00', '公式输入框失焦后不应清空原值');
     assert.strictEqual(documentStub.elements.get('calculatedValueText').textContent, '--', '公式输入框失焦后不应自动计算');
+
+    const writesBeforeShortcut = storage.getWrites().length;
+    const fetchCountBeforeShortcut = fetchCount;
+    documentStub.elements.get('calculatedValueText').textContent = '5.00';
+    documentStub.elements.get('formulaShortcutSubtract').click();
+    assert.strictEqual(documentStub.elements.get('calculationExpressionInput').value, '180-X', '点击 180-X 快捷按钮应替换公式输入框内容');
+    assert.strictEqual(documentStub.elements.get('calculatedValueText').textContent, '--', '点击快捷按钮应重置计算结果展示，不应自动预览');
+    assert.strictEqual(fetchCount, fetchCountBeforeShortcut, '点击快捷按钮不应访问接口');
+    assert.strictEqual(storage.getWrites().length, writesBeforeShortcut, '点击快捷按钮不应写入 storage');
+    documentStub.elements.get('formulaShortcutIncrement').click();
+    assert.strictEqual(documentStub.elements.get('calculationExpressionInput').value, 'X+1', '点击 X+1 快捷按钮应替换而不是追加公式');
+    documentStub.elements.get('formulaShortcutXDivide').click();
+    assert.strictEqual(documentStub.elements.get('calculationExpressionInput').value, 'X/500000', '点击 X/500000 快捷按钮应替换公式输入框内容');
+
     await documentStub.elements.get('testCalculationBtn').click();
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.strictEqual(documentStub.elements.get('calculationExpressionInput').value, 'X/500000', '测试计算后不应清空公式输入框');
