@@ -483,7 +483,7 @@
       grid-template-columns: repeat(var(--config-board-columns), var(--config-card-width));
       gap: var(--config-board-gap);
       align-items: start;
-      justify-content: start;
+      justify-content: center;
       padding: 14px;
       border-radius: 18px;
       border: 1px dashed var(--panel-border);
@@ -660,6 +660,16 @@
       grid-template-columns: minmax(0, 1fr) 48px;
       gap: 0;
       align-items: stretch;
+    }
+
+    .site-config-actions.is-single-action {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .site-config-actions.is-single-action #finishSiteConfigBtn {
+      border-top-right-radius: 14px;
+      border-bottom-right-radius: 14px;
+      border-right: 1px solid rgba(154, 240, 222, 0.28);
     }
 
     #finishSiteConfigBtn,
@@ -880,7 +890,7 @@
               <label class="field site-name-field">
                 <input id="siteNameInput" type="text" placeholder="请输入站点名" autocomplete="off">
               </label>
-              <div class="site-config-actions">
+              <div id="siteConfigActions" class="site-config-actions">
                 <button id="finishSiteConfigBtn" class="primary-btn" type="button">完成配置</button>
                 <button id="siteActionMenuToggle" class="ghost-btn site-action-menu-toggle" type="button" aria-label="站点操作" aria-expanded="false">⌄</button>
                 <div id="siteActionMenu" class="site-action-menu" hidden>

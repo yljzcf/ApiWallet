@@ -220,6 +220,7 @@ function createDocumentStub() {
     'authHeaderValueInput',
     'fetchRawValueBtn',
     'finishSiteConfigBtn',
+    'siteConfigActions',
     'siteActionMenuToggle',
     'siteActionMenu',
     'advancedSettingsToggle',
@@ -583,6 +584,9 @@ function loadTestExports() {
     assert.strictEqual(documentStub.elements.get('homePanel').hidden, true, '进入新增站点配置页后应隐藏首页');
     assert.strictEqual(documentStub.elements.get('siteConfigPanel').hidden, false, '进入新增站点配置页后应显示站点配置面板');
     assert.strictEqual(documentStub.elements.get('siteErrorMessage').hidden, true, '进入新增站点配置页初始不应显示错误提示');
+    assert.strictEqual(documentStub.elements.get('siteActionMenuToggle').hidden, true, '新增站点页不应显示站点操作下拉箭头');
+    assert.strictEqual(documentStub.elements.get('deleteSiteBtn').hidden, true, '新增站点页不应显示删除站点按钮');
+    assert.strictEqual(documentStub.elements.get('siteConfigActions').classList.contains('is-single-action'), true, '新增站点页完成配置应使用完整单按钮状态');
 
     const writesBeforeCancel = storage.getWrites().length;
     documentStub.elements.get('createBackHomeBtn').click();
@@ -647,7 +651,9 @@ function loadTestExports() {
     assert.strictEqual(app.getCurrentView(), 'siteForm:edit', '点击单张卡片应进入站点配置页');
     assert.strictEqual(documentStub.elements.get('createModePanel').hidden, true, '点击单卡进入配置页时不应显示新增站点面板');
     assert.strictEqual(documentStub.elements.get('editModePanel').hidden, false, '点击单卡进入配置页时应显示修改站点面板');
+    assert.strictEqual(documentStub.elements.get('siteActionMenuToggle').hidden, false, '编辑站点页应显示站点操作下拉箭头');
     assert.strictEqual(documentStub.elements.get('deleteSiteBtn').hidden, false, '点击单卡进入修改站点面板后应能看到删除按钮');
+    assert.strictEqual(documentStub.elements.get('siteConfigActions').classList.contains('is-single-action'), false, '编辑站点页应保留完成配置 split button 状态');
 
     await app.finishSiteEdit({ calculationExpression: 'X/2' });
     assert.strictEqual(storage.getSnapshot().siteConfigs[0].calculationExpression, 'X/2', '编辑完成后应保存新的公式表达式');

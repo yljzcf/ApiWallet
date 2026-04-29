@@ -42,6 +42,7 @@ function createDomRefs(doc = document) {
     authHeaderValueInput: doc.getElementById('authHeaderValueInput'),
     fetchRawValueBtn: doc.getElementById('fetchRawValueBtn'),
     finishSiteConfigBtn: doc.getElementById('finishSiteConfigBtn'),
+    siteConfigActions: doc.getElementById('siteConfigActions'),
     siteActionMenuToggle: doc.getElementById('siteActionMenuToggle'),
     siteActionMenu: doc.getElementById('siteActionMenu'),
     advancedSettingsToggle: doc.getElementById('advancedSettingsToggle'),
@@ -1037,6 +1038,7 @@ function createPageApp(options = {}) {
   }
 
   function setSiteActionMenuAvailable(available) {
+    refs.siteConfigActions?.classList.toggle('is-single-action', !available);
     if (refs.siteActionMenuToggle) refs.siteActionMenuToggle.hidden = !available;
     if (!available) closeSiteActionMenu();
     if (refs.deleteSiteBtn) refs.deleteSiteBtn.hidden = !available;
