@@ -633,6 +633,18 @@
       align-items: end;
     }
 
+    .formula-shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .formula-shortcut-btn {
+      min-width: 88px;
+      height: 34px;
+      color: var(--accent-strong);
+    }
+
     [hidden] { display: none !important; }
 
     @media (max-width: 920px) {
@@ -765,6 +777,11 @@
                     <input id="calculationExpressionInput" type="text" placeholder="例如：X/500000" autocomplete="off">
                   </label>
                   <button id="testCalculationBtn" class="ghost-btn" type="button">测试计算</button>
+                </div>
+                <div class="formula-shortcuts" aria-label="公式快捷输入">
+                  <button class="formula-shortcut-btn" type="button" data-calculation-expression="X/500000">X/500000</button>
+                  <button class="formula-shortcut-btn" type="button" data-calculation-expression="180-X">180-X</button>
+                  <button class="formula-shortcut-btn" type="button" data-calculation-expression="X+1">X+1</button>
                 </div>
                 <article class="metric-card calculated-value-card">
                   <span class="metric-label">计算结果展示</span>

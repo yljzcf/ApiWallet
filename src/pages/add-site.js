@@ -53,6 +53,7 @@ function createDomRefs(doc = document) {
     calculationSection: doc.getElementById('calculationSection'),
     rawValueText: doc.getElementById('rawValueText'),
     calculationExpressionInput: doc.getElementById('calculationExpressionInput'),
+    calculationShortcutButtons: Array.from(doc.querySelectorAll('[data-calculation-expression]')),
     calculatedValueText: doc.getElementById('calculatedValueText'),
     authorizationInput: doc.getElementById('authorizationInput'),
     tokenInput: doc.getElementById('tokenInput'),
@@ -1558,6 +1559,17 @@ function createPageApp(options = {}) {
     return payload;
   }
 
+  function setCalculationExpressionFromShortcut(expression) {
+    if (!refs.calculationExpressionInput) {
+      return;
+    }
+    refs.calculationExpressionInput.value = expression;
+    refs.calculationExpressionInput.dispatchEvent?.(new Event('input', { bubbles: true }));
+    if (!refs.calculationExpressionInput.dispatchEvent) {
+      refs.calculationExpressionInput.dispatch?.('input');
+    }
+  }
+
   return {
     async bind() {
       refs.modeCreateBtn?.addEventListener('click', () => setMode('create'));
@@ -1599,6 +1611,11 @@ function createPageApp(options = {}) {
         lastTestedExpression = '';
         lastCalculatedValue = null;
         if (refs.calculatedValueText) refs.calculatedValueText.textContent = '--';
+      });
+      refs.calculationShortcutButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          setCalculationExpressionFromShortcut(button.dataset.calculationExpression || '');
+        });
       });
       refs.createBackHomeBtn?.addEventListener('click', () => (
         returnHomeWithoutSaving().catch((error) => {

@@ -69,6 +69,9 @@ assert(/id="advancedSettingsPanel"[^>]*hidden/.test(html), '高级配置面板�
 assert(/id="calculationExpressionInput"/.test(html), '页面应提供输出公式输入框');
 assert(/id="testCalculationBtn"/.test(html), '页面应提供测试计算按钮');
 assert(/id="calculatedValueText"/.test(html), '页面应提供计算结果展示');
+assert(/data-calculation-expression="X\/500000"/.test(advancedHtml), '公式区域应提供 X/500000 快捷输入按钮');
+assert(/data-calculation-expression="180-X"/.test(advancedHtml), '公式区域应提供 180-X 快捷输入按钮');
+assert(/data-calculation-expression="X\+1"/.test(advancedHtml), '公式区域应提供 X+1 快捷输入按钮');
 assert(!/A\/500000/.test(advancedHtml), '页面不应再提供 A/500000 快捷公式');
 assert(!/180-A/.test(advancedHtml), '页面不应再提供 180-A 快捷公式');
 assert(!/id="finishAddSiteBtn"/.test(html), '统一单页表单不应再使用旧完成按钮 id');
