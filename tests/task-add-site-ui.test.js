@@ -8,11 +8,15 @@ const targetPath = path.join(projectRoot, 'src/pages/add-site.html');
 assert(fs.existsSync(targetPath), '文件不存在: add-site.html');
 
 const html = fs.readFileSync(targetPath, 'utf8');
+const manifest = JSON.parse(fs.readFileSync(path.join(projectRoot, 'manifest.json'), 'utf8'));
 const compactHtml = html.replace(/\s+/g, ' ');
 const bodyHtml = html.slice(html.indexOf('<body'));
 const homeSectionMatch = bodyHtml.match(/<section[^>]+id="homePanel"[\s\S]*?<\/section>/);
 const siteFormMatch = bodyHtml.match(/<section[^>]+id="siteConfigPanel"[\s\S]*?<\/section>/);
 const advancedSectionMatch = bodyHtml.match(/<section[^>]+class="advanced-settings"[\s\S]*?<\/section>/);
+
+assert.strictEqual(manifest.name, 'ApiWallet - 钱包看板', '扩展名称应更新为 ApiWallet - 钱包看板');
+assert.strictEqual(manifest.version, '1.2.0', '扩展版本号应更新为 1.2.0');
 
 assert(/站点管理|id="siteManagerLayout"/.test(html), '独立页面应是站点管理页');
 assert(/id="homePanel"/.test(html), '配置页应有首页容器 homePanel');
@@ -20,6 +24,16 @@ assert(homeSectionMatch, '首页容器应是独立 section，便于只显示首�
 
 const homeHtml = homeSectionMatch ? homeSectionMatch[0] : '';
 assert(/id="configBoard"/.test(homeHtml), '首页应显示当前卡片展示区');
+assert(/\.config-board\s*\{[\s\S]*--config-card-width:\s*[^;]+;[\s\S]*--config-board-columns:\s*1;[\s\S]*grid-template-columns:\s*repeat\(var\(--config-board-columns\),\s*var\(--config-card-width\)\);[\s\S]*align-items:\s*start;[\s\S]*justify-content:\s*start;/.test(html), '配置看板应使用统一自适应卡片宽度、动态列数布局，并让卡片保持居左');
+assert(!/\.config-board\s*\{(?:(?!\n\s*\}).)*justify-content:\s*center;/s.test(html), '配置看板卡片不应居中显示，避免编组后视觉右偏');
+assert(!/\.config-board\s*\{[\s\S]*width:\s*min\(100%,\s*calc\(var\(--config-card-width\) \* var\(--config-board-columns\)/.test(html), '配置看板区宽度应恢复铺满面板，不应按卡片数量收缩');
+assert(!/\.config-board\s*\{[\s\S]*min-height:\s*260px;/.test(html), '配置看板不应保留过高的 260px 最小高度');
+assert(/\.config-board-empty\s*\{[\s\S]*min-height:\s*96px;[\s\S]*grid-column:\s*1\s*\/\s*-1;/.test(html), '配置看板空态应降低高度并横跨可用宽度');
+assert(!/\.config-board-empty\s*\{[\s\S]*min-height:\s*180px;/.test(html), '配置看板空态不应保留 180px 高度预留');
+assert(/\.config-board-card\s*\{[\s\S]*width:\s*var\(--config-card-width\);[\s\S]*min-height:\s*76px;[\s\S]*display:\s*grid;/.test(html), '配置卡片应使用统一自适应宽度和紧凑高度');
+assert(/\.config-board-card\.is-group\s*\{[\s\S]*border-color:\s*rgba\(154,\s*240,\s*222,\s*0\.36\);[\s\S]*background:[\s\S]*linear-gradient/.test(html), '编组卡片应有区别于普通站点卡片的强调样式');
+assert(/\.config-card-kind\s*\{[\s\S]*text-transform:\s*uppercase;/.test(html), '配置卡片应提供类型标识样式');
+assert(!/\.config-card-meta\s*\{/.test(html), '配置卡片不应再提供第三行辅助文字样式');
 assert(/id="addSiteConfigBtn"[^>]*>[\s\S]*新增站点/.test(homeHtml), '首页应显示“新增站点”按钮');
 assert(/id="importFileBtn"[^>]*>[\s\S]*导入配置/.test(homeHtml), '首页应显示“导入配置”按钮');
 assert(/id="exportSitesBtn"[^>]*>[\s\S]*导出配置/.test(homeHtml), '首页应显示“导出配置”按钮');
@@ -48,12 +62,14 @@ assert(!/class="[^"]*site-name-field[\s\S]*<span class="label">站点名<\/span>
 assert(/\.site-config-card\s*\{[\s\S]*--site-control-height:\s*44px;[\s\S]*--site-action-width:\s*150px;/.test(html), '单站点配置页应定义统一控件高度和动作区宽度');
 assert(/\.site-config-card__topbar\s*\{[\s\S]*grid-template-columns:\s*var\(--site-action-width\)\s+minmax\(0,\s*1fr\)\s+var\(--site-action-width\);/.test(html), '顶部返回、站点名和完成配置动作区应使用统一动作宽度列');
 assert(/\.site-config-actions\s*\{[\s\S]*width:\s*var\(--site-action-width\);[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+48px;[\s\S]*gap:\s*0;/.test(html), '完成配置动作区应使用固定宽度的合并式 split button 布局');
+assert(/\.site-config-actions\.is-single-action\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(html), '新增站点页完成配置动作区应支持完整单按钮布局');
+assert(/\.site-config-actions\.is-single-action\s+#finishSiteConfigBtn\s*\{[\s\S]*border-top-right-radius:\s*14px;[\s\S]*border-bottom-right-radius:\s*14px;[\s\S]*border-right:\s*1px\s+solid\s+rgba\(154,\s*240,\s*222,\s*0\.28\);/.test(html), '新增站点页完成配置按钮应恢复完整右侧圆角和右边框');
 assert(/#backHomeBtn,\s*#fetchRawValueBtn,\s*#testCalculationBtn\s*\{[\s\S]*width:\s*var\(--site-action-width\);/.test(html), '返回面板、访问接口和测试计算按钮应使用同一宽度');
 assert(/#siteConfigPanel\s+button,[\s\S]*#siteConfigPanel\s+input,[\s\S]*#siteConfigPanel\s+select\s*\{[\s\S]*height:\s*var\(--site-control-height\);[\s\S]*box-sizing:\s*border-box;/.test(html), '单站点配置页按钮、输入框和下拉框应统一高度');
 assert(/#finishSiteConfigBtn,[\s\S]*#siteActionMenuToggle\s*\{[\s\S]*background:\s*var\(--accent-soft\);[\s\S]*border-color:\s*rgba\(154,\s*240,\s*222,\s*0\.28\);/.test(html), '完成配置按钮和下拉按钮应使用相同背景与边框色');
 assert(/#finishSiteConfigBtn\s*\{[\s\S]*border-top-right-radius:\s*0;[\s\S]*border-bottom-right-radius:\s*0;/.test(html), '完成配置按钮右侧应与下拉按钮合并');
 assert(/\.site-action-menu-toggle\s*\{[\s\S]*border-top-left-radius:\s*0;[\s\S]*border-bottom-left-radius:\s*0;/.test(html), '下拉按钮左侧应与完成配置按钮合并');
-assert(/class="[^"]*site-config-actions/.test(siteFormHtml), '单站点配置页应提供完成配置动作区');
+assert(/id="siteConfigActions"\s+class="[^"]*site-config-actions/.test(siteFormHtml), '单站点配置页应提供可切换状态的完成配置动作区');
 assert(/id="finishSiteConfigBtn"[\s\S]*完成配置/.test(siteFormHtml), '单站点配置页应在动作区提供完成配置按钮');
 assert(/id="siteActionMenuToggle"[\s\S]*aria-label="站点操作"/.test(siteFormHtml), '完成配置按钮旁应提供站点操作下拉箭头');
 assert(/id="siteActionMenu"[\s\S]*id="deleteSiteBtn"[\s\S]*删除站点/.test(siteFormHtml), '删除站点应隐藏在完成配置旁的下拉菜单中');
