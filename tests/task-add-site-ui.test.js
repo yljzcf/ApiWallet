@@ -44,7 +44,15 @@ assert(siteFormMatch, '配置页应提供单站点配置页面');
 const siteFormHtml = siteFormMatch ? siteFormMatch[0].replace(/\s+/g, ' ') : '';
 assert(/class="[^"]*site-config-card/.test(siteFormHtml), '单站点配置页应使用现代卡片式主容器');
 assert(/id="backHomeBtn"[\s\S]*返回面板/.test(html), '单站点配置页应提供返回面板按钮');
-assert(/id="deleteSiteBtn"[\s\S]*删除站点/.test(html), '单站点配置页应提供删除站点按钮');
+assert(!/class="[^"]*site-name-field[\s\S]*<span class="label">站点名<\/span>/.test(siteFormHtml), '站点名输入框上方不应显示突出文字标签');
+assert(/\.site-config-actions\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+48px;[\s\S]*gap:\s*0;/.test(html), '完成配置动作区应使用合并式 split button 布局');
+assert(/#finishSiteConfigBtn\s*\{[\s\S]*border-top-right-radius:\s*0;[\s\S]*border-bottom-right-radius:\s*0;/.test(html), '完成配置按钮右侧应与下拉按钮合并');
+assert(/\.site-action-menu-toggle\s*\{[\s\S]*border-top-left-radius:\s*0;[\s\S]*border-bottom-left-radius:\s*0;/.test(html), '下拉按钮左侧应与完成配置按钮合并');
+assert(/class="[^"]*site-config-actions/.test(siteFormHtml), '单站点配置页应提供完成配置动作区');
+assert(/id="finishSiteConfigBtn"[\s\S]*完成配置/.test(siteFormHtml), '单站点配置页应在动作区提供完成配置按钮');
+assert(/id="siteActionMenuToggle"[\s\S]*aria-label="站点操作"/.test(siteFormHtml), '完成配置按钮旁应提供站点操作下拉箭头');
+assert(/id="siteActionMenu"[\s\S]*id="deleteSiteBtn"[\s\S]*删除站点/.test(siteFormHtml), '删除站点应隐藏在完成配置旁的下拉菜单中');
+assert(!/正在新增站点/.test(html), '新增站点时不应显示“正在新增站点”提示');
 const nameIndex = siteFormHtml.indexOf('站点名');
 const urlIndex = siteFormHtml.indexOf('接口地址');
 const fieldIndex = siteFormHtml.indexOf('监控字段');
@@ -63,7 +71,9 @@ assert(!/button\.innerHTML\s*=\s*`[\s\S]*\$\{site\.fieldPath/.test(addSiteJs), '
 
 assert(advancedSectionMatch, '配置页应提供高级配置区域');
 const advancedHtml = advancedSectionMatch ? advancedSectionMatch[0] : '';
-assert(/id="rawValueSection"[\s\S]*id="fetchRawValueBtn"[\s\S]*id="rawValueText"[\s\S]*id="finishSiteConfigBtn"/.test(html), '原值行应按方案 B 同时包含访问接口、原值展示和完成配置按钮');
+assert(/\.raw-value-card,\s*\.calculated-value-card\s*\{[\s\S]*min-height:\s*48px;[\s\S]*grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\);/.test(html), '原值和计算结果展示应使用紧凑的一行高度控件');
+assert(!/\.raw-value-card,\s*\.calculated-value-card\s*\{[\s\S]*min-height:\s*76px;/.test(html), '原值和计算结果展示不应保留过高卡片');
+assert(/id="rawValueSection"[\s\S]*id="rawValueText"[\s\S]*id="fetchRawValueBtn"/.test(html), '原值行应同时包含原值展示和访问接口按钮');
 assert(/id="advancedSettingsToggle"[\s\S]*点击展开高级设置/.test(html), '高级配置应提供默认收起的展开入口');
 assert(/id="advancedSettingsPanel"[^>]*hidden/.test(html), '高级配置面板应默认收起');
 assert(/id="calculationExpressionInput"/.test(html), '页面应提供输出公式输入框');
