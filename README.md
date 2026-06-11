@@ -11,6 +11,8 @@ ApiWallet 是一个 Chrome Manifest V3 扩展，用于在浏览器本地创建�
 - 支持站点导入与导出
 - 支持卡片排序、分组和布局切换
 - 支持绿色主题与后台自动刷新
+- 支持自定义请求头名称（如 `x-group-id`）
+- 支持内置动态签名鉴权（如 nekocode.ai）
 
 ## 安装方式
 
@@ -48,7 +50,10 @@ ApiWallet 是一个 Chrome Manifest V3 扩展，用于在浏览器本地创建�
 - 站点名称
 - 接口地址
 - 字段路径，例如 `data.balance`
-- 鉴权 Header，例如 `authorization`、`token`、`new-api-user`
+- 鉴权方式：
+  - 预设 Header：`authorization`、`token`、`new-api-user`
+  - 自定义 Header：任意名称如 `x-group-id`
+  - 动态签名：内置签名算法（如 nekocode）
 - 公式表达式，例如 `X/500000`
 
 ## 目录结构
