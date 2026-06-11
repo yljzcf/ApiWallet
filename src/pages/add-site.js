@@ -211,49 +211,93 @@ async function parseJsonSafely(response) {
   }
 }
 
+let addSiteCookieRuleIdCounter = 1;
+
+async function injectCookiesForUrl(url) {
+  try {
+    const cookies = await chrome.cookies.getAll({ url });
+    if (cookies.length === 0) return null;
+
+    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    const ruleId = addSiteCookieRuleIdCounter++ % 9999 + 10001;
+    const domain = new URL(url).hostname;
+
+    await chrome.declarativeNetRequest.updateSessionRules({
+      addRules: [{
+        id: ruleId,
+        priority: 1,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [{
+            header: 'Cookie',
+            operation: 'set',
+            value: cookieHeader
+          }]
+        },
+        condition: {
+          urlFilter: `*://${domain}/*`,
+          resourceTypes: ['xmlhttprequest']
+        }
+      }],
+      removeRuleIds: [ruleId]
+    });
+
+    return ruleId;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function removeCookieRule(ruleId) {
+  if (ruleId === null) return;
+  try {
+    await chrome.declarativeNetRequest.updateSessionRules({
+      addRules: [],
+      removeRuleIds: [ruleId]
+    });
+  } catch (e) {
+    // ignore
+  }
+}
+
 async function requestPreview(task, fetchImpl) {
-  const normalizedHeaders = normalizeHeaders(task.headers) || {};
-  const fetchOptions = { credentials: 'include' };
-  const headers = { ...normalizedHeaders };
+  const normalizedHeaders = normalizeHeaders(task.headers);
+  const ruleId = await injectCookiesForUrl(task.url);
 
   try {
-    const cookies = await chrome.cookies.getAll({ url: task.url });
-    if (cookies.length > 0) {
-      headers['Cookie'] = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    const fetchOptions = { credentials: 'include' };
+    if (normalizedHeaders) {
+      fetchOptions.headers = normalizedHeaders;
     }
-  } catch (e) {
-    // cookie API 不可用时静默降级
-  }
 
-  if (Object.keys(headers).length > 0) {
-    fetchOptions.headers = headers;
-  }
+    const response = await fetchImpl(task.url, fetchOptions);
+    const json = await parseJsonSafely(response);
 
-  const response = await fetchImpl(task.url, fetchOptions);
-  const json = await parseJsonSafely(response);
-
-  if (!response.ok) {
-    const sharedError = buildHttpError(task, response, json, {
-      diagnosticTaskIds: new Set([task.id])
-    });
-    if (response.status === 401 || response.status === 403) {
-      throw createTaskError(sharedError.message, {
-        ...sharedError,
-        kind: 'auth',
-        status: response.status,
-        taskId: task.id
+    if (!response.ok) {
+      const sharedError = buildHttpError(task, response, json, {
+        diagnosticTaskIds: new Set([task.id])
       });
+      if (response.status === 401 || response.status === 403) {
+        throw createTaskError(sharedError.message, {
+          ...sharedError,
+          kind: 'auth',
+          status: response.status,
+          taskId: task.id
+        });
+      }
+      throw sharedError;
     }
-    throw sharedError;
-  }
 
-  const rawValue = extractBalanceValue(json, task.fieldPath);
-  const calculatedValue = applyCalculationExpression(rawValue, task.calculationExpression);
-  return {
-    rawValue,
-    calculatedValue,
-    headers: normalizedHeaders || {}
-  };
+    const rawValue = extractBalanceValue(json, task.fieldPath);
+    const calculatedValue = applyCalculationExpression(rawValue, task.calculationExpression);
+    return {
+      rawValue,
+      calculatedValue,
+      headers: normalizedHeaders || {}
+    };
+  } finally {
+    await removeCookieRule(ruleId);
+  }
 }
 
 function buildTaskFromEditableDraft(siteDraft) {

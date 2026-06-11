@@ -65,42 +65,87 @@ async function ensureAutoRefreshAlarm() {
   await chrome.alarms.clear(AUTO_REFRESH_ALARM_NAME);
 }
 
+let bgCookieRuleIdCounter = 1;
+
+async function injectCookiesForUrl(url) {
+  try {
+    const cookies = await chrome.cookies.getAll({ url });
+    if (cookies.length === 0) return null;
+
+    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    const ruleId = bgCookieRuleIdCounter++ % 9999 + 20001;
+    const domain = new URL(url).hostname;
+
+    await chrome.declarativeNetRequest.updateSessionRules({
+      addRules: [{
+        id: ruleId,
+        priority: 1,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [{
+            header: 'Cookie',
+            operation: 'set',
+            value: cookieHeader
+          }]
+        },
+        condition: {
+          urlFilter: `*://${domain}/*`,
+          resourceTypes: ['xmlhttprequest']
+        }
+      }],
+      removeRuleIds: [ruleId]
+    });
+
+    return ruleId;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function removeCookieRule(ruleId) {
+  if (ruleId === null) return;
+  try {
+    await chrome.declarativeNetRequest.updateSessionRules({
+      addRules: [],
+      removeRuleIds: [ruleId]
+    });
+  } catch (e) {
+    // ignore
+  }
+}
+
 async function fetchJsonTaskValue(task) {
   if (task.type !== 'json') {
     throw buildUnsupportedTaskError(task);
   }
 
-  const headers = task.headers ? { ...task.headers } : {};
+  const ruleId = await injectCookiesForUrl(task.url);
+
   try {
-    const cookies = await chrome.cookies.getAll({ url: task.url });
-    if (cookies.length > 0) {
-      headers['Cookie'] = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    const fetchOptions = { credentials: 'include' };
+    if (task.headers) {
+      fetchOptions.headers = task.headers;
     }
-  } catch (e) {
-    // cookie API 不可用时静默降级
-  }
 
-  const fetchOptions = { credentials: 'include' };
-  if (Object.keys(headers).length > 0) {
-    fetchOptions.headers = headers;
-  }
+    const response = await fetch(task.url, fetchOptions);
+    let json = null;
+    try {
+      json = await response.json();
+    } catch (error) {
+      throw createTaskError(`JSON 解析失败：${error.message}`, {
+        kind: 'json-parse',
+        taskId: task.id
+      });
+    }
 
-  const response = await fetch(task.url, fetchOptions);
-  let json = null;
-  try {
-    json = await response.json();
-  } catch (error) {
-    throw createTaskError(`JSON 解析失败：${error.message}`, {
-      kind: 'json-parse',
-      taskId: task.id
-    });
-  }
+    if (!response.ok) {
+      throw buildHttpError(task, response, json);
+    }
 
-  if (!response.ok) {
-    throw buildHttpError(task, response, json);
+    return task.extract(json);
+  } finally {
+    await removeCookieRule(ruleId);
   }
-
-  return task.extract(json);
 }
 
 function shouldRefreshTask(task) {

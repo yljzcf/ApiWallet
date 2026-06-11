@@ -49,6 +49,10 @@ function formatTaskErrorValue(error, fallbackValue) {
     return '字段变更';
   }
 
+  if (error.kind === 'invalid-value') {
+    return `值异常(${error.rawValue === '' ? '空' : String(error.rawValue).slice(0, 10)})`;
+  }
+
   if (error.kind === 'calculation') {
     return '公式错误';
   }
@@ -1697,47 +1701,89 @@ function buildHttpError(task, response, json = null) {
   return buildSharedHttpError(task, response, json);
 }
 
-async function buildFetchOptionsWithCookies(url, existingHeaders) {
-  const fetchOptions = { credentials: 'include' };
-  const headers = existingHeaders ? { ...existingHeaders } : {};
+let cookieRuleIdCounter = 1;
 
+async function injectCookiesForUrl(url) {
   try {
     const cookies = await chrome.cookies.getAll({ url });
-    if (cookies.length > 0) {
-      headers['Cookie'] = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
-    }
+    console.log(`[ApiWallet] ${url} 找到 ${cookies.length} 个 cookie`);
+    if (cookies.length === 0) return null;
+
+    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    const ruleId = cookieRuleIdCounter++ % 9999 + 1;
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname;
+
+    await chrome.declarativeNetRequest.updateSessionRules({
+      addRules: [{
+        id: ruleId,
+        priority: 1,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [{
+            header: 'Cookie',
+            operation: 'set',
+            value: cookieHeader
+          }]
+        },
+        condition: {
+          urlFilter: `*://${domain}/*`,
+          resourceTypes: ['xmlhttprequest']
+        }
+      }],
+      removeRuleIds: [ruleId]
+    });
+
+    return ruleId;
   } catch (e) {
-    // cookie API 不可用时静默降级
+    console.warn('[ApiWallet] cookie 注入失败:', e);
+    return null;
   }
+}
 
-  if (Object.keys(headers).length > 0) {
-    fetchOptions.headers = headers;
+async function removeCookieRule(ruleId) {
+  if (ruleId === null) return;
+  try {
+    await chrome.declarativeNetRequest.updateSessionRules({
+      addRules: [],
+      removeRuleIds: [ruleId]
+    });
+  } catch (e) {
+    // ignore
   }
-
-  return fetchOptions;
 }
 
 async function fetchTaskValue(task) {
-  const fetchOptions = await buildFetchOptionsWithCookies(task.url, task.headers);
+  const ruleId = await injectCookiesForUrl(task.url);
 
-  const response = await fetch(task.url, fetchOptions);
-  if (task.type === 'json') {
-    const json = await response.json();
-
-    if (!response.ok) {
-      throw buildHttpError(task, response, json);
+  try {
+    const fetchOptions = { credentials: 'include' };
+    if (task.headers) {
+      fetchOptions.headers = task.headers;
     }
 
-    return task.extract(json);
-  }
+    const response = await fetch(task.url, fetchOptions);
+    if (task.type === 'json') {
+      const json = await response.json();
+      console.log(`[ApiWallet] ${task.url} 响应:`, JSON.stringify(json).slice(0, 200));
 
-  if (!response.ok) {
-    throw buildHttpError(task, response);
-  }
+      if (!response.ok) {
+        throw buildHttpError(task, response, json);
+      }
 
-  const text = await response.text();
-  const doc = new DOMParser().parseFromString(text, 'text/html');
-  return task.extract(doc);
+      return task.extract(json);
+    }
+
+    if (!response.ok) {
+      throw buildHttpError(task, response);
+    }
+
+    const text = await response.text();
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    return task.extract(doc);
+  } finally {
+    await removeCookieRule(ruleId);
+  }
 }
 
 async function fetchSingleData(taskId) {

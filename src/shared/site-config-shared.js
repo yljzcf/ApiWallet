@@ -42,7 +42,8 @@
   }
 
   function createInvalidValueError(fieldPath, rawValue) {
-    return createTaskError(`接口字段存在但不是可解析数字：${fieldPath}`, {
+    const displayValue = rawValue === '' ? '(空字符串)' : String(rawValue);
+    return createTaskError(`接口字段存在但不是可解析数字：${fieldPath}（原始值：${displayValue}）`, {
       kind: 'invalid-value',
       fieldPath,
       rawValue
@@ -479,7 +480,8 @@
       return `字段不存在：${error.fieldPath}`;
     }
     if (error.kind === 'invalid-value') {
-      return `字段存在但不是可解析数字：${error.fieldPath}`;
+      const displayValue = error.rawValue === '' ? '(空字符串)' : String(error.rawValue);
+      return `字段存在但不是可解析数字：${error.fieldPath}（原始值：${displayValue}）`;
     }
     if (error.kind === 'app-error') {
       return `接口返回错误：${error.message}`;
