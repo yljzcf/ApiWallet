@@ -27,6 +27,7 @@ ApiWallet 是一个 Chrome Manifest V3 扩展，用于在浏览器本地创建�
 
 - `storage`：保存站点配置、看板数据、布局偏好和自动刷新设置。
 - `alarms`：用于后台定时刷新。
+- `cookies`：读取浏览器 Cookie 并注入到接口请求中，解决扩展跨域请求无法携带 SameSite Cookie 的问题。
 - `<all_urls>`：允许用户自行配置任意站点接口并发起请求。
 
 ## 隐私说明

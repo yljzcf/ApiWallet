@@ -70,9 +70,19 @@ async function fetchJsonTaskValue(task) {
     throw buildUnsupportedTaskError(task);
   }
 
+  const headers = task.headers ? { ...task.headers } : {};
+  try {
+    const cookies = await chrome.cookies.getAll({ url: task.url });
+    if (cookies.length > 0) {
+      headers['Cookie'] = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    }
+  } catch (e) {
+    // cookie API 不可用时静默降级
+  }
+
   const fetchOptions = { credentials: 'include' };
-  if (task.headers) {
-    fetchOptions.headers = task.headers;
+  if (Object.keys(headers).length > 0) {
+    fetchOptions.headers = headers;
   }
 
   const response = await fetch(task.url, fetchOptions);

@@ -212,10 +212,21 @@ async function parseJsonSafely(response) {
 }
 
 async function requestPreview(task, fetchImpl) {
+  const normalizedHeaders = normalizeHeaders(task.headers) || {};
   const fetchOptions = { credentials: 'include' };
-  const normalizedHeaders = normalizeHeaders(task.headers);
-  if (normalizedHeaders) {
-    fetchOptions.headers = normalizedHeaders;
+  const headers = { ...normalizedHeaders };
+
+  try {
+    const cookies = await chrome.cookies.getAll({ url: task.url });
+    if (cookies.length > 0) {
+      headers['Cookie'] = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    }
+  } catch (e) {
+    // cookie API 不可用时静默降级
+  }
+
+  if (Object.keys(headers).length > 0) {
+    fetchOptions.headers = headers;
   }
 
   const response = await fetchImpl(task.url, fetchOptions);

@@ -1697,11 +1697,28 @@ function buildHttpError(task, response, json = null) {
   return buildSharedHttpError(task, response, json);
 }
 
-async function fetchTaskValue(task) {
+async function buildFetchOptionsWithCookies(url, existingHeaders) {
   const fetchOptions = { credentials: 'include' };
-  if (task.headers) {
-    fetchOptions.headers = task.headers;
+  const headers = existingHeaders ? { ...existingHeaders } : {};
+
+  try {
+    const cookies = await chrome.cookies.getAll({ url });
+    if (cookies.length > 0) {
+      headers['Cookie'] = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    }
+  } catch (e) {
+    // cookie API 不可用时静默降级
   }
+
+  if (Object.keys(headers).length > 0) {
+    fetchOptions.headers = headers;
+  }
+
+  return fetchOptions;
+}
+
+async function fetchTaskValue(task) {
+  const fetchOptions = await buildFetchOptionsWithCookies(task.url, task.headers);
 
   const response = await fetch(task.url, fetchOptions);
   if (task.type === 'json') {
