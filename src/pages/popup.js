@@ -15,7 +15,8 @@ const {
   serializeSiteConfigs: serializeSharedSiteConfigs,
   mergeStoredSiteConfigs: mergeSharedSiteConfigs,
   buildPersistedSiteConfigsFromRuntime: buildPersistedSharedSiteConfigsFromRuntime,
-  buildHttpError: buildSharedHttpError
+  buildHttpError: buildSharedHttpError,
+  generateNekoSignHeaders
 } = SiteConfigShared;
 
 async function injectDemoCardsIfFirstRun() {
@@ -1758,8 +1759,16 @@ async function fetchTaskValue(task) {
 
   try {
     const fetchOptions = { credentials: 'include' };
-    if (task.headers) {
-      fetchOptions.headers = task.headers;
+    const headers = {};
+
+    if (task.dynamicSign === 'nekocode') {
+      Object.assign(headers, await generateNekoSignHeaders(task.url));
+    } else if (task.headers) {
+      Object.assign(headers, task.headers);
+    }
+
+    if (Object.keys(headers).length) {
+      fetchOptions.headers = headers;
     }
 
     const response = await fetch(task.url, fetchOptions);

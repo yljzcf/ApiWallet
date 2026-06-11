@@ -268,6 +268,18 @@
     return Object.fromEntries(entries);
   }
 
+  async function generateNekoSignHeaders(url) {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    const nonce = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const fullPath = new URL(url).pathname;
+    const path = fullPath.replace(/^\/api/, '');
+    const input = timestamp + nonce + path + 'nekoneko';
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+    const sign = Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+    return { 'X-Timestamp': timestamp, 'X-Nonce': nonce, 'X-Sign': sign };
+  }
+
   function normalizeDivideBy(value) {
     if (value === '' || value === null || value === undefined) {
       return null;
@@ -285,6 +297,7 @@
     const fieldPath = typeof task?.fieldPath === 'string' ? task.fieldPath.trim() : '';
     const headers = normalizeHeaders(task?.headers);
     const calculationExpression = normalizeCalculationExpression(task?.calculationExpression);
+    const dynamicSign = typeof task?.dynamicSign === 'string' && task.dynamicSign.trim() ? task.dynamicSign.trim() : '';
     const runtimeTask = {
       id: String(task?.id || '').trim(),
       name: typeof task?.name === 'string' && task.name.trim() ? task.name.trim() : '自定义站点',
@@ -292,6 +305,7 @@
       type: task?.type === 'html' ? 'html' : 'json',
       ...(fieldPath ? { fieldPath } : {}),
       ...(headers ? { headers } : {}),
+      ...(dynamicSign ? { dynamicSign } : {}),
       ...(calculationExpression ? { calculationExpression } : {}),
       ...(task?.isCustom === true ? { isCustom: true } : {}),
       ...(task?.isDemo === true ? { isDemo: true } : {}),
@@ -375,6 +389,7 @@
           ...(typeof task.url === 'string' && task.url.trim() ? { url: task.url.trim() } : {}),
           ...(task.type === 'json' || task.type === 'html' ? { type: task.type } : {}),
           ...(normalizeHeaders(task.headers) ? { headers: normalizeHeaders(task.headers) } : {}),
+          ...(typeof task.dynamicSign === 'string' && task.dynamicSign.trim() ? { dynamicSign: task.dynamicSign.trim() } : {}),
           ...(fieldPath ? { fieldPath } : {}),
           ...(normalizeCalculationExpression(task.calculationExpression) ? { calculationExpression: normalizeCalculationExpression(task.calculationExpression) } : {}),
           ...(task.isCustom === true ? { isCustom: true } : {}),
@@ -394,6 +409,7 @@
         ...(typeof task.url === 'string' && task.url.trim() ? { url: task.url.trim() } : {}),
         ...(task.type === 'json' || task.type === 'html' ? { type: task.type } : {}),
         ...(normalizeHeaders(task.headers) ? { headers: normalizeHeaders(task.headers) } : {}),
+        ...(typeof task.dynamicSign === 'string' && task.dynamicSign.trim() ? { dynamicSign: task.dynamicSign.trim() } : {}),
         ...(typeof task.fieldPath === 'string' && task.fieldPath.trim() ? { fieldPath: task.fieldPath.trim() } : {}),
         ...(normalizeCalculationExpression(task.calculationExpression) ? { calculationExpression: normalizeCalculationExpression(task.calculationExpression) } : {}),
         ...(task.isCustom === true ? { isCustom: true } : {}),
@@ -543,6 +559,7 @@
     deleteSiteConfigEntry,
     detectSuggestedAuthHeader,
     formatWizardErrorMessage,
-    buildHttpError
+    buildHttpError,
+    generateNekoSignHeaders
   };
 });

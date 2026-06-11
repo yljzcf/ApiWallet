@@ -9,7 +9,8 @@ const {
   isDemoTask,
   createTaskError,
   mergeStoredSiteConfigs,
-  buildHttpError
+  buildHttpError,
+  generateNekoSignHeaders
 } = SiteConfigShared;
 
 const AUTO_REFRESH_ALARM_NAME = 'auto-refresh-board-data';
@@ -123,8 +124,16 @@ async function fetchJsonTaskValue(task) {
 
   try {
     const fetchOptions = { credentials: 'include' };
-    if (task.headers) {
-      fetchOptions.headers = task.headers;
+    const headers = {};
+
+    if (task.dynamicSign === 'nekocode') {
+      Object.assign(headers, await generateNekoSignHeaders(task.url));
+    } else if (task.headers) {
+      Object.assign(headers, task.headers);
+    }
+
+    if (Object.keys(headers).length) {
+      fetchOptions.headers = headers;
     }
 
     const response = await fetch(task.url, fetchOptions);

@@ -22,7 +22,8 @@ const {
   extractBalanceValue,
   applyCalculationExpression,
   normalizeCalculationExpression,
-  isDemoTask
+  isDemoTask,
+  generateNekoSignHeaders
 } = SiteConfigShared;
 
 const STORAGE_KEYS = ['siteConfigs', 'colorMode'];
@@ -39,6 +40,13 @@ function createDomRefs(doc = document) {
     siteUrlInput: doc.getElementById('siteUrlInput'),
     siteFieldPathInput: doc.getElementById('siteFieldPathInput'),
     authHeaderSelect: doc.getElementById('authHeaderSelect'),
+    authHeaderCustomKeyWrap: doc.getElementById('authHeaderCustomKeyWrap'),
+    authHeaderCustomKeyInput: doc.getElementById('authHeaderCustomKeyInput'),
+    authHeaderCustomBackBtn: doc.getElementById('authHeaderCustomBackBtn'),
+    authDynamicSignWrap: doc.getElementById('authDynamicSignWrap'),
+    authDynamicSignSelect: doc.getElementById('authDynamicSignSelect'),
+    authDynamicSignBackBtn: doc.getElementById('authDynamicSignBackBtn'),
+    authHeaderValueField: doc.getElementById('authHeaderValueField'),
     authHeaderValueInput: doc.getElementById('authHeaderValueInput'),
     fetchRawValueBtn: doc.getElementById('fetchRawValueBtn'),
     finishSiteConfigBtn: doc.getElementById('finishSiteConfigBtn'),
@@ -160,12 +168,14 @@ function sanitizeRetryInput(input = {}) {
 
 function sanitizeEditableSiteInput(input = {}) {
   const normalizedHeaders = normalizeHeaders(input.headers) || sanitizeHeaderInputs(input);
+  const dynamicSign = typeof input.dynamicSign === 'string' && input.dynamicSign.trim() ? input.dynamicSign.trim() : '';
   return {
     id: typeof input.id === 'string' ? input.id.trim() : '',
     name: typeof input.name === 'string' ? input.name.trim() : '',
     url: typeof input.url === 'string' ? input.url.trim() : '',
     fieldPath: typeof input.fieldPath === 'string' ? input.fieldPath.trim() : '',
     headers: normalizedHeaders,
+    ...(dynamicSign ? { dynamicSign } : {}),
     calculationExpression: normalizeCalculationExpression(input.calculationExpression),
     isCustom: input.isCustom === true
   };
@@ -197,7 +207,8 @@ function buildDraftTask(state) {
     url: state.siteUrl,
     fieldPath: state.fieldPath,
     calculationExpression: state.calculationExpression,
-    headers: normalizeHeaders(state.headers) || undefined
+    headers: normalizeHeaders(state.headers) || undefined,
+    ...(state.dynamicSign ? { dynamicSign: state.dynamicSign } : {})
   };
 }
 
@@ -266,8 +277,16 @@ async function requestPreview(task, fetchImpl) {
 
   try {
     const fetchOptions = { credentials: 'include' };
-    if (normalizedHeaders) {
-      fetchOptions.headers = normalizedHeaders;
+    const headers = {};
+
+    if (task.dynamicSign === 'nekocode') {
+      Object.assign(headers, await generateNekoSignHeaders(task.url));
+    } else if (normalizedHeaders) {
+      Object.assign(headers, normalizedHeaders);
+    }
+
+    if (Object.keys(headers).length) {
+      fetchOptions.headers = headers;
     }
 
     const response = await fetchImpl(task.url, fetchOptions);
@@ -309,6 +328,7 @@ function buildTaskFromEditableDraft(siteDraft) {
     fieldPath: siteDraft.fieldPath,
     calculationExpression: siteDraft.calculationExpression,
     headers: siteDraft.headers,
+    ...(siteDraft.dynamicSign ? { dynamicSign: siteDraft.dynamicSign } : {}),
     ...(siteDraft.isCustom ? { isCustom: true } : {})
   };
 
@@ -1031,17 +1051,80 @@ function createPageApp(options = {}) {
     refs.importMessage.classList.toggle('is-success', kind === 'success');
   }
 
-  function readAuthHeaderInputs() {
-    const key = refs.authHeaderSelect?.value;
-    const value = typeof refs.authHeaderValueInput?.value === 'string' ? refs.authHeaderValueInput.value.trim() : '';
-    return key && value ? { [key]: value } : {};
+  function showCustomHeaderKeyInput(value = '') {
+    if (refs.authHeaderSelect) refs.authHeaderSelect.hidden = true;
+    if (refs.authHeaderCustomKeyWrap) refs.authHeaderCustomKeyWrap.hidden = false;
+    if (refs.authDynamicSignWrap) refs.authDynamicSignWrap.hidden = true;
+    if (refs.authHeaderValueField) refs.authHeaderValueField.hidden = false;
+    if (refs.authHeaderCustomKeyInput) {
+      refs.authHeaderCustomKeyInput.value = value;
+      refs.authHeaderCustomKeyInput.focus();
+    }
   }
 
-  function fillAuthHeaderInputs(headers = {}) {
+  function showDynamicSignSelect(value = 'nekocode') {
+    if (refs.authHeaderSelect) refs.authHeaderSelect.hidden = true;
+    if (refs.authHeaderCustomKeyWrap) refs.authHeaderCustomKeyWrap.hidden = true;
+    if (refs.authDynamicSignWrap) refs.authDynamicSignWrap.hidden = false;
+    if (refs.authHeaderValueField) refs.authHeaderValueField.hidden = true;
+    if (refs.authDynamicSignSelect) refs.authDynamicSignSelect.value = value;
+  }
+
+  function showPresetHeaderSelect(value) {
+    if (refs.authHeaderCustomKeyWrap) refs.authHeaderCustomKeyWrap.hidden = true;
+    if (refs.authDynamicSignWrap) refs.authDynamicSignWrap.hidden = true;
+    if (refs.authHeaderValueField) refs.authHeaderValueField.hidden = false;
+    if (refs.authHeaderSelect) {
+      refs.authHeaderSelect.hidden = false;
+      refs.authHeaderSelect.value = value || 'authorization';
+    }
+  }
+
+  function isDynamicSignMode() {
+    return refs.authDynamicSignWrap?.hidden === false;
+  }
+
+  function isCustomHeaderMode() {
+    return refs.authHeaderCustomKeyWrap?.hidden === false;
+  }
+
+  function readAuthHeaderInputs() {
+    if (isDynamicSignMode()) {
+      return {};
+    }
+    const key = isCustomHeaderMode()
+      ? (refs.authHeaderCustomKeyInput?.value?.trim() || '')
+      : refs.authHeaderSelect?.value;
+    const value = typeof refs.authHeaderValueInput?.value === 'string' ? refs.authHeaderValueInput.value.trim() : '';
+    return key && key !== '__custom__' && key !== '__dynamic_sign__' && value ? { [key]: value } : {};
+  }
+
+  function readDynamicSignInput() {
+    if (!isDynamicSignMode()) return '';
+    return refs.authDynamicSignSelect?.value || '';
+  }
+
+  function fillAuthHeaderInputs(headers = {}, dynamicSign = '') {
+    if (dynamicSign) {
+      showDynamicSignSelect(dynamicSign);
+      if (refs.authHeaderValueInput) refs.authHeaderValueInput.value = '';
+      return;
+    }
+
     const normalized = normalizeHeaders(headers) || {};
-    const selectedKey = SUPPORTED_AUTH_HEADERS.find((key) => normalized[key]) || 'authorization';
-    if (refs.authHeaderSelect) refs.authHeaderSelect.value = selectedKey;
-    if (refs.authHeaderValueInput) refs.authHeaderValueInput.value = normalized[selectedKey] || '';
+    const keys = Object.keys(normalized);
+    const presetKey = SUPPORTED_AUTH_HEADERS.find((key) => normalized[key]);
+
+    if (presetKey) {
+      showPresetHeaderSelect(presetKey);
+      if (refs.authHeaderValueInput) refs.authHeaderValueInput.value = normalized[presetKey] || '';
+    } else if (keys.length > 0) {
+      showCustomHeaderKeyInput(keys[0]);
+      if (refs.authHeaderValueInput) refs.authHeaderValueInput.value = normalized[keys[0]] || '';
+    } else {
+      showPresetHeaderSelect('authorization');
+      if (refs.authHeaderValueInput) refs.authHeaderValueInput.value = '';
+    }
   }
 
   function readUnifiedDraftFromInputs() {
@@ -1052,6 +1135,7 @@ function createPageApp(options = {}) {
       fieldPath: refs.siteFieldPathInput?.value,
       calculationExpression: refs.calculationExpressionInput?.value,
       headers: readAuthHeaderInputs(),
+      dynamicSign: readDynamicSignInput(),
       isCustom: refs.selectedSiteBadge?.dataset?.isCustom === 'true'
     };
   }
@@ -1141,7 +1225,7 @@ function createPageApp(options = {}) {
     if (refs.editSiteUrlInput) refs.editSiteUrlInput.value = site.url || '';
     if (refs.editSiteFieldPathInput) refs.editSiteFieldPathInput.value = site.fieldPath || '';
     if (refs.calculationExpressionInput) refs.calculationExpressionInput.value = site.calculationExpression || '';
-    fillAuthHeaderInputs(site.headers);
+    fillAuthHeaderInputs(site.headers, site.dynamicSign);
     setSiteActionMenuAvailable(Boolean(site.id));
     resetUnifiedPreview();
     resetCalculationState();
@@ -1741,6 +1825,19 @@ function createPageApp(options = {}) {
       refs.advancedSettingsToggle?.addEventListener('click', () => {
         const nextExpanded = refs.advancedSettingsPanel?.hidden !== false;
         setAdvancedSettingsExpanded(nextExpanded);
+      });
+      refs.authHeaderSelect?.addEventListener('change', () => {
+        if (refs.authHeaderSelect.value === '__custom__') {
+          showCustomHeaderKeyInput('');
+        } else if (refs.authHeaderSelect.value === '__dynamic_sign__') {
+          showDynamicSignSelect('nekocode');
+        }
+      });
+      refs.authHeaderCustomBackBtn?.addEventListener('click', () => {
+        showPresetHeaderSelect('authorization');
+      });
+      refs.authDynamicSignBackBtn?.addEventListener('click', () => {
+        showPresetHeaderSelect('authorization');
       });
       refs.nextStepBtn?.addEventListener('click', () => {
         submitNextStep().catch((error) => {

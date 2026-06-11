@@ -207,6 +207,36 @@
       background-color: #ffffff;
     }
 
+    .auth-header-key-group {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .auth-header-key-group select,
+    .auth-header-key-group input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .auth-header-custom-wrap {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .auth-header-custom-wrap input {
+      flex: 1;
+    }
+
+    .auth-header-custom-wrap .ghost-btn {
+      flex-shrink: 0;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
     input:focus-visible,
     textarea:focus-visible,
     button:focus-visible,
@@ -912,13 +942,27 @@
               </label>
               <label class="field">
                 <span class="label">鉴权字段</span>
-                <select id="authHeaderSelect">
-                  <option value="authorization">authorization</option>
-                  <option value="token">token</option>
-                  <option value="new-api-user">new-api-user</option>
-                </select>
+                <span class="auth-header-key-group">
+                  <select id="authHeaderSelect">
+                    <option value="authorization">authorization</option>
+                    <option value="token">token</option>
+                    <option value="new-api-user">new-api-user</option>
+                    <option value="__custom__">自定义...</option>
+                    <option value="__dynamic_sign__">动态签名</option>
+                  </select>
+                  <span id="authHeaderCustomKeyWrap" class="auth-header-custom-wrap" hidden>
+                    <input id="authHeaderCustomKeyInput" type="text" placeholder="如 x-group-id" autocomplete="off">
+                    <button id="authHeaderCustomBackBtn" class="ghost-btn" type="button">预设</button>
+                  </span>
+                  <span id="authDynamicSignWrap" class="auth-header-custom-wrap" hidden>
+                    <select id="authDynamicSignSelect">
+                      <option value="nekocode">nekocode</option>
+                    </select>
+                    <button id="authDynamicSignBackBtn" class="ghost-btn" type="button">预设</button>
+                  </span>
+                </span>
               </label>
-              <label class="field">
+              <label class="field" id="authHeaderValueField">
                 <span class="label">鉴权字段值</span>
                 <input id="authHeaderValueInput" type="text" placeholder="Bearer ... / token 值 / 用户标识" autocomplete="off">
               </label>
