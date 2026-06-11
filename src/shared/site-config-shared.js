@@ -21,7 +21,9 @@
       if (!trimmed) {
         return null;
       }
-      const num = Number(trimmed);
+      // 去除英文和中文引号
+      const unquoted = trimmed.replace(/^["'"'「」『』""'']+|["'"'「」『』""'']+$/g, '');
+      const num = Number(unquoted);
       return Number.isFinite(num) ? num : null;
     }
 
