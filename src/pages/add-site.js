@@ -23,6 +23,8 @@ const {
   applyCalculationExpression,
   normalizeCalculationExpression,
   isDemoTask,
+  createCookieInjector,
+  fetchJsonWithAuth,
   generateNekoSignHeaders
 } = SiteConfigShared;
 
@@ -222,58 +224,11 @@ async function parseJsonSafely(response) {
   }
 }
 
-let addSiteCookieRuleIdCounter = 1;
-
-async function injectCookiesForUrl(url) {
-  try {
-    const cookies = await chrome.cookies.getAll({ url });
-    if (cookies.length === 0) return null;
-
-    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
-    const ruleId = addSiteCookieRuleIdCounter++ % 9999 + 10001;
-    const domain = new URL(url).hostname;
-
-    await chrome.declarativeNetRequest.updateSessionRules({
-      addRules: [{
-        id: ruleId,
-        priority: 1,
-        action: {
-          type: 'modifyHeaders',
-          requestHeaders: [{
-            header: 'Cookie',
-            operation: 'set',
-            value: cookieHeader
-          }]
-        },
-        condition: {
-          urlFilter: `*://${domain}/*`,
-          resourceTypes: ['xmlhttprequest']
-        }
-      }],
-      removeRuleIds: [ruleId]
-    });
-
-    return ruleId;
-  } catch (e) {
-    return null;
-  }
-}
-
-async function removeCookieRule(ruleId) {
-  if (ruleId === null) return;
-  try {
-    await chrome.declarativeNetRequest.updateSessionRules({
-      addRules: [],
-      removeRuleIds: [ruleId]
-    });
-  } catch (e) {
-    // ignore
-  }
-}
+const addSiteInjector = createCookieInjector(10001);
 
 async function requestPreview(task, fetchImpl) {
   const normalizedHeaders = normalizeHeaders(task.headers);
-  const ruleId = await injectCookiesForUrl(task.url);
+  const ruleId = await addSiteInjector.inject(task.url);
 
   try {
     const fetchOptions = { credentials: 'include' };
@@ -315,7 +270,7 @@ async function requestPreview(task, fetchImpl) {
       headers: normalizedHeaders || {}
     };
   } finally {
-    await removeCookieRule(ruleId);
+    await addSiteInjector.remove(ruleId);
   }
 }
 

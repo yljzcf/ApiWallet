@@ -16,7 +16,8 @@ const {
   mergeStoredSiteConfigs: mergeSharedSiteConfigs,
   buildPersistedSiteConfigsFromRuntime: buildPersistedSharedSiteConfigsFromRuntime,
   buildHttpError: buildSharedHttpError,
-  generateNekoSignHeaders
+  createCookieInjector,
+  fetchJsonWithAuth
 } = SiteConfigShared;
 
 async function injectDemoCardsIfFirstRun() {
@@ -1698,100 +1699,25 @@ async function init() {
   }
 }
 
-function buildHttpError(task, response, json = null) {
-  return buildSharedHttpError(task, response, json);
-}
-
-let cookieRuleIdCounter = 1;
-
-async function injectCookiesForUrl(url) {
-  try {
-    const cookies = await chrome.cookies.getAll({ url });
-    console.log(`[ApiWallet] ${url} 找到 ${cookies.length} 个 cookie`);
-    if (cookies.length === 0) return null;
-
-    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
-    const ruleId = cookieRuleIdCounter++ % 9999 + 1;
-    const urlObj = new URL(url);
-    const domain = urlObj.hostname;
-
-    await chrome.declarativeNetRequest.updateSessionRules({
-      addRules: [{
-        id: ruleId,
-        priority: 1,
-        action: {
-          type: 'modifyHeaders',
-          requestHeaders: [{
-            header: 'Cookie',
-            operation: 'set',
-            value: cookieHeader
-          }]
-        },
-        condition: {
-          urlFilter: `*://${domain}/*`,
-          resourceTypes: ['xmlhttprequest']
-        }
-      }],
-      removeRuleIds: [ruleId]
-    });
-
-    return ruleId;
-  } catch (e) {
-    console.warn('[ApiWallet] cookie 注入失败:', e);
-    return null;
-  }
-}
-
-async function removeCookieRule(ruleId) {
-  if (ruleId === null) return;
-  try {
-    await chrome.declarativeNetRequest.updateSessionRules({
-      addRules: [],
-      removeRuleIds: [ruleId]
-    });
-  } catch (e) {
-    // ignore
-  }
-}
+const popupInjector = createCookieInjector(1);
 
 async function fetchTaskValue(task) {
-  const ruleId = await injectCookiesForUrl(task.url);
+  if (task.type === 'json') {
+    const { json } = await fetchJsonWithAuth(task, popupInjector);
+    return task.extract(json);
+  }
 
+  const ruleId = await popupInjector.inject(task.url);
   try {
-    const fetchOptions = { credentials: 'include' };
-    const headers = {};
-
-    if (task.dynamicSign === 'nekocode') {
-      Object.assign(headers, await generateNekoSignHeaders(task.url));
-    } else if (task.headers) {
-      Object.assign(headers, task.headers);
-    }
-
-    if (Object.keys(headers).length) {
-      fetchOptions.headers = headers;
-    }
-
-    const response = await fetch(task.url, fetchOptions);
-    if (task.type === 'json') {
-      const json = await response.json();
-      console.log(`[ApiWallet] ${task.url} 响应:`, JSON.stringify(json).slice(0, 200));
-
-      if (!response.ok) {
-        throw buildHttpError(task, response, json);
-      }
-
-      return task.extract(json);
-    }
-
+    const response = await fetch(task.url, { credentials: 'include' });
     if (!response.ok) {
-      throw buildHttpError(task, response);
+      throw buildSharedHttpError(task, response);
     }
-
     const text = await response.text();
     const doc = new DOMParser().parseFromString(text, 'text/html');
     return task.extract(doc);
   } finally {
-    await removeCookieRule(ruleId);
+    await popupInjector.remove(ruleId);
   }
 }
 

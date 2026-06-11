@@ -280,6 +280,103 @@
     return { 'X-Timestamp': timestamp, 'X-Nonce': nonce, 'X-Sign': sign };
   }
 
+  function createCookieInjector(ruleIdOffset = 1) {
+    let counter = 1;
+
+    async function inject(url) {
+      try {
+        const cookies = await chrome.cookies.getAll({ url });
+        if (cookies.length === 0) return null;
+
+        const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+        const ruleId = counter++ % 9999 + ruleIdOffset;
+        const domain = new URL(url).hostname;
+
+        await chrome.declarativeNetRequest.updateSessionRules({
+          addRules: [{
+            id: ruleId,
+            priority: 1,
+            action: {
+              type: 'modifyHeaders',
+              requestHeaders: [{
+                header: 'Cookie',
+                operation: 'set',
+                value: cookieHeader
+              }]
+            },
+            condition: {
+              urlFilter: `*://${domain}/*`,
+              resourceTypes: ['xmlhttprequest']
+            }
+          }],
+          removeRuleIds: [ruleId]
+        });
+
+        return ruleId;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function remove(ruleId) {
+      if (ruleId === null) return;
+      try {
+        await chrome.declarativeNetRequest.updateSessionRules({
+          addRules: [],
+          removeRuleIds: [ruleId]
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    return { inject, remove };
+  }
+
+  function buildFetchHeaders(task) {
+    const headers = {};
+    if (task.dynamicSign === 'nekocode') {
+      return generateNekoSignHeaders(task.url).then((signHeaders) => Object.assign(headers, signHeaders));
+    }
+    const normalized = normalizeHeaders(task.headers);
+    if (normalized) {
+      Object.assign(headers, normalized);
+    }
+    return Promise.resolve(headers);
+  }
+
+  async function fetchJsonWithAuth(task, injector, fetchImpl) {
+    const ruleId = await injector.inject(task.url);
+
+    try {
+      const fetchOptions = { credentials: 'include' };
+      const headers = await buildFetchHeaders(task);
+
+      if (Object.keys(headers).length) {
+        fetchOptions.headers = headers;
+      }
+
+      const response = await (fetchImpl || fetch)(task.url, fetchOptions);
+      let json = null;
+      try {
+        json = await response.json();
+      } catch (error) {
+        throw createTaskError(`JSON 解析失败：${error.message}`, {
+          kind: 'json-parse',
+          taskId: task.id
+        });
+      }
+
+      if (!response.ok) {
+        throw buildHttpError(task, response, json);
+      }
+
+      return { json, response };
+    } finally {
+      await injector.remove(ruleId);
+    }
+  }
+
   function normalizeDivideBy(value) {
     if (value === '' || value === null || value === undefined) {
       return null;
@@ -560,6 +657,8 @@
     detectSuggestedAuthHeader,
     formatWizardErrorMessage,
     buildHttpError,
-    generateNekoSignHeaders
+    generateNekoSignHeaders,
+    createCookieInjector,
+    fetchJsonWithAuth
   };
 });
